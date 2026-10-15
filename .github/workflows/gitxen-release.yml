@@ -1,4 +1,4 @@
-﻿name: Gitxen release
+name: Gitxen release
 
 # Triggered by Gitxen's own tags (gitxen-v1.2.3), which is also what install.ps1 looks for.
 
@@ -143,7 +143,7 @@ jobs:
           path: dist
 
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             dist/*.msi
