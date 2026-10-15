@@ -34,8 +34,9 @@ toolchain (`cswinrt.exe`, PRI tasks) reads the `KitsRoot10` registry value. Wind
 Moq), with names that keep the method name and add a snake_case suffix
 (`MyMethod_should_return_expected`) and no Arrange/Act/Assert comments. They cover the parsers in
 `Gitxen.Git`, `Diff/HunkSplitter.cs` (linked in as a source file, since the WinUI project cannot be
-referenced) and `SecretScanner`. Still to cover: `Terminal/TerminalOutputBuffer.cs`,
-`Services/GitDirectory.cs` and the GitHub parsers: all pure string-in/string-out.
+referenced), `SecretScanner`, `Terminal/TerminalOutputBuffer.cs` and `Services/GitDirectory.cs`
+(both linked the same way) and `GitHubParsers`, whose inputs in `Fixtures/` are real `gh --json`
+output captured from KakosoAi/gitxen. Re-capture them rather than hand-editing when gh changes.
 
 **Building is not proof it runs.** The csproj carries several workarounds for genuine .NET 10 SDK /
 Windows App SDK version-resolution defects, each commented in place. Some of those failures appear

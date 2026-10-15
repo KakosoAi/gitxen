@@ -1,0 +1,53 @@
+[
+  {
+    "attempt": 1,
+    "conclusion": "success",
+    "createdAt": "2026-10-15T18:06:57Z",
+    "databaseId": 38782933375,
+    "displayTitle": "feat(packaging): put gx on PATH from the Scoop package too",
+    "event": "push",
+    "headBranch": "main",
+    "headSha": "5beef5286b55605069a3cf57fbf27c6aeafdbc3b",
+    "name": "CI",
+    "number": 51,
+    "startedAt": "2026-10-15T18:06:57Z",
+    "status": "completed",
+    "updatedAt": "2026-10-15T18:10:41Z",
+    "url": "https://github.com/KakosoAi/gitxen/actions/runs/38782933375",
+    "workflowName": "CI"
+  },
+  {
+    "attempt": 1,
+    "conclusion": "failure",
+    "createdAt": "2026-10-15T17:43:37Z",
+    "databaseId": 38779719177,
+    "displayTitle": "Bump Microsoft.VisualStudio.Threading from 17.13.61 to 18.12.1",
+    "event": "pull_request_target",
+    "headBranch": "dependabot/nuget/Microsoft.VisualStudio.Threading-18.12.1",
+    "headSha": "830311876b2c4f9fadd4067b0029e572e088068e",
+    "name": "CLA",
+    "number": 64,
+    "startedAt": "2026-10-15T17:43:37Z",
+    "status": "completed",
+    "updatedAt": "2026-10-15T17:43:48Z",
+    "url": "https://github.com/KakosoAi/gitxen/actions/runs/38779719177",
+    "workflowName": "CLA"
+  },
+  {
+    "attempt": 1,
+    "conclusion": "cancelled",
+    "createdAt": "2026-10-15T17:27:12Z",
+    "databaseId": 38777453176,
+    "displayTitle": "build(deps): Bump actions/setup-dotnet from 5.2.0 to 6.0.0 (#14)",
+    "event": "push",
+    "headBranch": "main",
+    "headSha": "2454adc578a33f982c18b181199cba49d3cb76d5",
+    "name": "CI",
+    "number": 41,
+    "startedAt": "2026-10-15T17:27:12Z",
+    "status": "completed",
+    "updatedAt": "2026-10-15T17:27:18Z",
+    "url": "https://github.com/KakosoAi/gitxen/actions/runs/38777453176",
+    "workflowName": "CI"
+  }
+]

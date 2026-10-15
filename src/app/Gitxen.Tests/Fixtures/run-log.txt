@@ -1,0 +1,25 @@
+CLA signed	Set up job	﻿2026-10-15T17:47:22.5677639Z Current runner version: '2.337.0'
+CLA signed	Set up job	2026-10-15T17:47:22.5705437Z ##[group]Runner Image Provisioner
+CLA signed	Set up job	2026-10-15T17:47:22.5706918Z Hosted Compute Agent
+CLA signed	Set up job	2026-10-15T17:47:22.5708082Z Version: 20261012.601
+CLA signed	Set up job	2026-10-15T17:47:22.5709342Z Commit: f3dc54e1fb89da6852db922499a0233137369e1d
+CLA signed	Set up job	2026-10-15T17:47:22.5710667Z Build Date: 2026-10-12T17:48:21Z
+CLA signed	Set up job	2026-10-15T17:47:22.5711770Z Worker ID: {f8f17b3a-a6c1-4aa5-8c39-264ff4ae5bdf}
+CLA signed	Set up job	2026-10-15T17:47:22.5713457Z Region: eastus
+CLA signed	Set up job	2026-10-15T17:47:22.5714459Z Cloud: Azure
+CLA signed	Set up job	2026-10-15T17:47:22.5715539Z ##[endgroup]
+CLA signed	Set up job	2026-10-15T17:47:22.5718019Z ##[group]Operating System
+CLA signed	Set up job	2026-10-15T17:47:22.5719173Z Ubuntu
+CLA signed	Set up job	2026-10-15T17:47:22.5720182Z 24.04.5
+CLA signed	Set up job	2026-10-15T17:47:22.5721148Z LTS
+CLA signed	Set up job	2026-10-15T17:47:22.5722148Z ##[endgroup]
+CLA signed	Set up job	2026-10-15T17:47:22.5723527Z ##[group]Runner Image
+CLA signed	Set up job	2026-10-15T17:47:22.5724646Z Image: ubuntu-24.04
+CLA signed	Set up job	2026-10-15T17:47:22.5725845Z Version: 20261012.334.1
+CLA signed	Set up job	2026-10-15T17:47:22.5727749Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261012.334/images/ubuntu/Ubuntu2404-Readme.md
+CLA signed	Set up job	2026-10-15T17:47:22.5730983Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261012.334
+CLA signed	Set up job	2026-10-15T17:47:22.5733096Z ##[endgroup]
+CLA signed	Set up job	2026-10-15T17:47:22.5735842Z ##[group]GITHUB_TOKEN Permissions
+CLA signed	Set up job	2026-10-15T17:47:22.5738956Z Actions: write
+CLA signed	Set up job	2026-10-15T17:47:22.5740099Z Contents: write
+CLA signed	Set up job	2026-10-15T17:47:22.5741168Z Metadata: read

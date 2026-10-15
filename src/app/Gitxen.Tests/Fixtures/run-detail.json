@@ -1,0 +1,54 @@
+{
+  "attempt": 1,
+  "conclusion": "failure",
+  "createdAt": "2026-10-15T17:43:37Z",
+  "databaseId": 38779719177,
+  "displayTitle": "Bump Microsoft.VisualStudio.Threading from 17.13.61 to 18.12.1",
+  "event": "pull_request_target",
+  "headBranch": "dependabot/nuget/Microsoft.VisualStudio.Threading-18.12.1",
+  "headSha": "830311876b2c4f9fadd4067b0029e572e088068e",
+  "jobs": [
+    {
+      "completedAt": "2026-10-15T17:43:47Z",
+      "conclusion": "failure",
+      "databaseId": 116576464290,
+      "name": "CLA signed",
+      "startedAt": "2026-10-15T17:43:41Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-15T17:43:44Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-15T17:43:42Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T17:43:45Z",
+          "conclusion": "failure",
+          "name": "CLA assistant",
+          "number": 2,
+          "startedAt": "2026-10-15T17:43:44Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T17:43:45Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 3,
+          "startedAt": "2026-10-15T17:43:45Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/KakosoAi/gitxen/actions/runs/38779719177/job/116576464290"
+    }
+  ],
+  "name": "CLA",
+  "number": 64,
+  "startedAt": "2026-10-15T17:43:37Z",
+  "status": "completed",
+  "updatedAt": "2026-10-15T17:43:48Z",
+  "url": "https://github.com/KakosoAi/gitxen/actions/runs/38779719177",
+  "workflowName": "CLA"
+}

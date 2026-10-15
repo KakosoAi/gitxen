@@ -14,8 +14,16 @@
   <ItemGroup>
     <ProjectReference Include="..\Gitxen.Git\Gitxen.Git.csproj" />
     <ProjectReference Include="..\Gitxen.Core\Gitxen.Core.csproj" />
+    <ProjectReference Include="..\Gitxen.GitHub\Gitxen.GitHub.csproj" />
     <!-- Plain C#, no UI types: compiled here instead of referencing the WinUI application. -->
     <Compile Include="..\Gitxen\Diff\HunkSplitter.cs" Link="Linked\HunkSplitter.cs" />
+    <Compile Include="..\Gitxen\Terminal\TerminalOutputBuffer.cs" Link="Linked\TerminalOutputBuffer.cs" />
+    <Compile Include="..\Gitxen\Services\GitDirectory.cs" Link="Linked\GitDirectory.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Real gh output, captured from KakosoAi/gitxen. -->
+    <None Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
