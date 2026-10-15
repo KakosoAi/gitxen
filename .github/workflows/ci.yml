@@ -37,8 +37,19 @@ jobs:
           restore-keys: |
             nuget-ci-
 
+      - name: Resolve the installed Windows SDK metadata version
+        shell: pwsh
+        run: |
+          # Same as the release workflow: cswinrt reads the Windows SDK that is installed on the runner.
+          $kits = (Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows Kits\Installed Roots').KitsRoot10
+          $platform = Get-ChildItem (Join-Path $kits 'Platforms\UAP') -Directory |
+            Where-Object { Test-Path (Join-Path $_.FullName 'Platform.xml') } |
+            Sort-Object { [version]$_.Name } |
+            Select-Object -Last 1
+          "CsWinRTWindowsMetadata=$($platform.Name)" >> $env:GITHUB_ENV
+
       - name: Build app
-        run: dotnet build src/app/Gitxen/Gitxen.csproj -c Release -p:Platform=x64 -r win-x64 -v:m
+        run: dotnet build src/app/Gitxen/Gitxen.csproj -c Release -p:Platform=x64 -r win-x64 --self-contained true -p:WindowsAppSDKSelfContained=true -v:m
 
       - name: Build gx
         run: dotnet build src/app/Gitxen.Cli/Gitxen.Cli.csproj -c Release -r win-x64 -v:m

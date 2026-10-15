@@ -89,7 +89,11 @@
          the dependency graph would restore it on a clean machine — a CI runner fails the copy with
          MSB3030. PackageDownload is NuGet's way to pull a package into the cache without putting
          it in the graph; the exact-version bracket syntax is required. -->
-    <PackageDownload Include="Microsoft.Windows.SDK.NET.Ref" Version="[10.0.17763.38]" />
+    <!-- One item, both versions: NuGet keeps only one PackageDownload per id. The second is the
+         targeting pack for net10.0-windows10.0.19041.0, which the build also looks for in the NuGet
+         cache; a restore into an empty cache (a CI runner) does not fetch it, and the build then
+         stops with NETSDK1127. -->
+    <PackageDownload Include="Microsoft.Windows.SDK.NET.Ref" Version="[10.0.17763.38];[10.0.19041.57]" />
   </ItemGroup>
 
   <ItemGroup>
