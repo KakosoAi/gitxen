@@ -7,7 +7,7 @@
 
 Gitxen is a git client for Windows, built with WinUI 3.
 
-<!-- Add a screenshot or GIF here: docs/images/gitxen.png -->
+![Gitxen's Overview page: commit, contributor and language figures, activity over time and a twelve-month heat map](docs/images/gitxen-overview.png)
 
 It shows staged and unstaged changes with hunk-level staging, a commit graph with ref badges and
 live search, branches, remotes, tags, stashes, submodules, worktrees, reflog recovery and conflict
