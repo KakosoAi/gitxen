@@ -6,6 +6,21 @@ All notable changes to Gitxen are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-10-15
+
+### Fixed
+
+- Builds on a clean machine: the Windows SDK targeting pack is now downloaded explicitly, which
+  fixes CI and the release build on GitHub's runners (NETSDK1127).
+- `gx new` and `gx account auto` no longer block on git inside async commands.
+- `SHA256SUMS.txt` on a release lists only the files attached to it.
+
+### Changed
+
+- Dependencies: VisualStudio.Threading 18.12, BannedApiAnalyzers 5.6, Microsoft.NET.Test.Sdk 18.11,
+  AwesomeAssertions 9.6, SourceLink 10.0.402, and current GitHub Actions.
+- The .NET SDK is pinned to 10.0.204.
+
 ## [0.10.0] - 2026-10-15
 
 First public release, and the first under the GPL-3.0-or-later. Earlier versions were private and are
@@ -33,5 +48,6 @@ not part of this repository.
 
 - Licence: GPL-3.0-or-later. The project was previously proprietary.
 
-[Unreleased]: https://github.com/KakosoAi/gitxen/compare/gitxen-v0.10.0...HEAD
+[Unreleased]: https://github.com/KakosoAi/gitxen/compare/gitxen-v0.10.1...HEAD
+[0.10.1]: https://github.com/KakosoAi/gitxen/compare/gitxen-v0.10.0...gitxen-v0.10.1
 [0.10.0]: https://github.com/KakosoAi/gitxen/releases/tag/gitxen-v0.10.0

@@ -16,7 +16,7 @@ Packages are self-contained: no separate .NET or Windows App SDK install is need
 Verify a download against `SHA256SUMS.txt` on the same release:
 
 ```powershell
-Get-FileHash -Algorithm SHA256 .\Gitxen-0.10.0-x64.msi
+Get-FileHash -Algorithm SHA256 .\Gitxen-0.10.1-x64.msi
 ```
 
 ## First run
