@@ -37,8 +37,11 @@ jobs:
           restore-keys: |
             nuget-ci-
 
-      - name: Build
-        run: dotnet build Gitxen.slnx -c Release -v:m
+      - name: Build app
+        run: dotnet build src/app/Gitxen/Gitxen.csproj -c Release -p:Platform=x64 -r win-x64 -v:m
+
+      - name: Build gx
+        run: dotnet build src/app/Gitxen.Cli/Gitxen.Cli.csproj -c Release -r win-x64 -v:m
 
       - name: Test
-        run: dotnet test src/app/Gitxen.Tests/Gitxen.Tests.csproj -c Release -v:m
+        run: dotnet test src/app/Gitxen.Tests/Gitxen.Tests.csproj -c Release -r win-x64 -v:m
