@@ -185,7 +185,9 @@ public sealed partial class RepositoryView : UserControl
             return;
         }
 
-        string section = tab.LastSection.Length == 0 ? "overview" : tab.LastSection;
+        string section = tab.LastSection.Length == 0 ? "overview"
+            : SettingsCategories.Contains(tab.LastSection) ? "settings"
+            : tab.LastSection;
         NavigationViewItem? item = Navigation.MenuItems
             .Concat(Navigation.FooterMenuItems)
             .OfType<NavigationViewItem>()
@@ -215,8 +217,6 @@ public sealed partial class RepositoryView : UserControl
         ["pullrequests"] = PullRequestsPage,
         ["issues"] = IssuesPage,
         ["actions"] = ActionsPage,
-        ["gitconfig"] = GitConfigPage,
-        ["maintenance"] = MaintenancePage,
         ["settings"] = SettingsPage
     };
 
@@ -482,6 +482,13 @@ public sealed partial class RepositoryView : UserControl
             commands.Add(new PaletteCommand(title, "Go to", "", () => NavigateAsync(tag, page)));
         }
 
+        commands.Add(new PaletteCommand("Git config", "Settings", "", () => OpenSettingsCategoryAsync("gitconfig")));
+
+        if (tab.Mode == UiMode.Advanced)
+        {
+            commands.Add(new PaletteCommand("Maintenance", "Settings", "", () => OpenSettingsCategoryAsync("maintenance")));
+        }
+
         commands.Add(new PaletteCommand("Fetch", "Repository", "", () => RunAsync(t => t.FetchAsync())));
         commands.Add(new PaletteCommand("Pull", "Repository", "choose merge or rebase", PullAsync));
         commands.Add(new PaletteCommand("Push", "Repository", "", PushAsync));
@@ -572,6 +579,21 @@ public sealed partial class RepositoryView : UserControl
                 SectionGlyphs.GetValueOrDefault(tag, "\uE8A9"),
                 SectionTitle(tag), "Section", "",
                 () => NavigateAsync(targetTag, target))
+            { CategoryRank = 0 });
+        }
+
+        foreach (string category in SettingsCategories)
+        {
+            if (category == "maintenance" && tab.Mode != UiMode.Advanced)
+            {
+                continue;
+            }
+
+            string target = category;
+            items.Add(new GoToItem(
+                SectionGlyphs.GetValueOrDefault(category, ""),
+                SectionTitle(category), "Settings", "",
+                () => OpenSettingsCategoryAsync(target))
             { CategoryRank = 0 });
         }
 
@@ -724,16 +746,30 @@ public sealed partial class RepositoryView : UserControl
     private static string SectionTitle(string tag) => tag switch
     {
         "gitconfig" => "Git config",
+        "history" => "Timeline",
         _ => char.ToUpperInvariant(tag[0]) + tag[1..]
     };
 
     /// <summary>Shows a section by its navigation tag. The status bar's deep links land here.</summary>
     public async Task NavigateToSectionAsync(string tag)
     {
-        if (Pages.TryGetValue(tag, out RepositoryPage? page))
+        if (SettingsCategories.Contains(tag))
+        {
+            await OpenSettingsCategoryAsync(tag);
+        }
+        else if (Pages.TryGetValue(tag, out RepositoryPage? page))
         {
             await NavigateAsync(tag, page);
         }
+    }
+
+    /// <summary>Sections that are categories of Settings rather than pages of their own.</summary>
+    private static readonly string[] SettingsCategories = ["gitconfig", "maintenance"];
+
+    private async Task OpenSettingsCategoryAsync(string category)
+    {
+        await NavigateAsync("settings", SettingsPage);
+        await SettingsPage.ShowCategoryAsync(category);
     }
 
     private async Task NavigateAsync(string tag, RepositoryPage page)
@@ -917,7 +953,7 @@ public sealed partial class RepositoryView : UserControl
 
     /// <summary>Takes the user to the page that fixes the missing identity.</summary>
     private async void OpenGitConfig_Click(object sender, RoutedEventArgs e) =>
-        await NavigateAsync("gitconfig", GitConfigPage);
+        await OpenSettingsCategoryAsync("gitconfig");
     private async void Refresh_Click(object sender, RoutedEventArgs e)
     {
         if (Tab is RepositoryTabViewModel tab)

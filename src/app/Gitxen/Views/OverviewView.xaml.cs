@@ -153,14 +153,14 @@ public sealed partial class OverviewView : RepositoryPage
 
         Tiles.ItemsSource = new List<StatTile>
         {
-            new(G(0xE81C), "Commits", Count(o.Commits), last, $"{Count(o.Commits)} commits reachable from HEAD. Opens History.", "history"),
-            new(G(0xE716), "Contributors", Count(o.Contributors.Count), o.Contributors.Count > 0 ? $"most: {o.Contributors[0].Name}" : "", "Distinct authors, after the mailmap. Opens History.", "history"),
+            new(G(0xE81C), "Commits", Count(o.Commits), last, $"{Count(o.Commits)} commits reachable from HEAD. Opens Timeline.", "history"),
+            new(G(0xE716), "Contributors", Count(o.Contributors.Count), o.Contributors.Count > 0 ? $"most: {o.Contributors[0].Name}" : "", "Distinct authors, after the mailmap. Opens Timeline.", "history"),
             new(G(0xE8AB), "Branches", Count(o.Branches), "local", "Local branches. Opens Branches.", "branches"),
             new(G(0xE8EC), "Tags", Count(o.Tags), o.Tags > 0 ? "releases and marks" : "none yet", "Tags. Opens Tags.", "tags"),
             new(G(0xE8A5), "Files", Count(o.Files), o.Submodules > 0 ? $"{o.Submodules} submodules" : FileEntryRow.FormatSize(o.Bytes), "Files in the tree at HEAD. Opens Files.", "files"),
             new(G(0xE943), "Lines", Compact(o.Lines), "in text files", $"{Count(o.Lines)} lines in text files at HEAD (binary files are not counted). Opens Files.", "files"),
-            new(G(0xE787), "Age", age, since, "Time since the first commit. Opens History.", "history"),
-            new(G(0xE9D2), "This year", Count(o.CommitsLastYear), "commits in 12 months", "Commits in the last 53 weeks. Opens History.", "history"),
+            new(G(0xE787), "Age", age, since, "Time since the first commit. Opens Timeline.", "history"),
+            new(G(0xE9D2), "This year", Count(o.CommitsLastYear), "commits in 12 months", "Commits in the last 53 weeks. Opens Timeline.", "history"),
         };
     }
 

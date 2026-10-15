@@ -26,7 +26,7 @@
             <FontIcon Glyph="&#xE8EC;" Style="{StaticResource EmptyStateGlyphStyle}" />
             <TextBlock Text="No tags" Style="{StaticResource EmptyStateTitleStyle}" />
             <TextBlock Style="{StaticResource EmptyStateBodyStyle}"
-                       Text="Right-click a commit on the History page to tag it." />
+                       Text="Right-click a commit on the Timeline page to tag it." />
         </StackPanel>
 
         <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" Margin="0,16,0,0"

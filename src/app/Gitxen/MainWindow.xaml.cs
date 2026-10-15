@@ -1248,7 +1248,7 @@ public sealed partial class MainWindow : Window
             ("Ctrl+K", "Quick launcher: jump to a repository"),
             ("Ctrl+T", "Go to anything: repository, branch, tag, commit, stash, file"),
             ("Ctrl+Enter", "Commit (on the Changes page)"),
-            ("Ctrl+F", "Filter commits (on the History page)"),
+            ("Ctrl+F", "Filter commits (on the Timeline page)"),
             ("Ctrl+`", "Toggle the terminal"),
             ("F12", "Git activity console"),
             ("F1", "This list"),

@@ -33,9 +33,13 @@ public sealed partial class SettingsView : RepositoryPage
     /// </summary>
     private bool _isLoading;
 
+    /// <summary>The category on show: "general", "gitconfig" or "maintenance".</summary>
+    private string _category = "general";
+
     public SettingsView()
     {
         InitializeComponent();
+        CategoryList.SelectedIndex = 0;
     }
 
     /// <summary>"Gitxen 0.2.0", from the assembly, so the card cannot disagree with the build.</summary>
@@ -48,7 +52,156 @@ public sealed partial class SettingsView : RepositoryPage
         }
     }
 
-    public override Task ActivateAsync()
+    public override async Task ActivateAsync()
+    {
+        MaintenanceCategory.Visibility = Tab?.AdvancedVisibility ?? Visibility.Collapsed;
+
+        LoadGeneral();
+
+        if (_category == "gitconfig")
+        {
+            await GitConfigSection.ActivateAsync();
+        }
+        else if (_category == "maintenance")
+        {
+            await MaintenanceSection.ActivateAsync();
+        }
+    }
+
+    /// <summary>
+    ///  Shows one category — what "Git config" and "Maintenance" links elsewhere in the app open.
+    /// </summary>
+    public async Task ShowCategoryAsync(string category)
+    {
+        ListViewItem? item = CategoryList.Items.OfType<ListViewItem>()
+            .FirstOrDefault(candidate => (candidate.Tag as string) == category && candidate.Visibility == Visibility.Visible);
+
+        if (item is null)
+        {
+            return;
+        }
+
+        if (ReferenceEquals(CategoryList.SelectedItem, item))
+        {
+            await ActivateAsync();
+        }
+        else
+        {
+            CategoryList.SelectedItem = item;
+        }
+    }
+
+    private async void CategoryList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (CategoryList.SelectedItem is not ListViewItem { Tag: string category })
+        {
+            return;
+        }
+
+        _category = category;
+        GeneralSection.Visibility = category == "general" ? Visibility.Visible : Visibility.Collapsed;
+        GitConfigSection.Visibility = category == "gitconfig" ? Visibility.Visible : Visibility.Collapsed;
+        MaintenanceSection.Visibility = category == "maintenance" ? Visibility.Visible : Visibility.Collapsed;
+
+        if (category == "gitconfig")
+        {
+            await GitConfigSection.ActivateAsync();
+        }
+        else if (category == "maintenance")
+        {
+            await MaintenanceSection.ActivateAsync();
+        }
+    }
+
+    // ---- Search ---------------------------------------------------------------------------------
+
+    private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+    {
+        if (args.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
+        {
+            sender.ItemsSource = Search(sender.Text);
+        }
+    }
+
+    private async void SearchBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
+    {
+        if (args.SelectedItem is SettingsMatch match)
+        {
+            await RevealAsync(match);
+        }
+    }
+
+    private async void SearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+    {
+        if ((args.ChosenSuggestion as SettingsMatch ?? Search(args.QueryText).FirstOrDefault()) is SettingsMatch match)
+        {
+            await RevealAsync(match);
+        }
+    }
+
+    /// <summary>
+    ///  Every card whose words contain every word of the query, across all three categories. The
+    ///  cards are read from the pages themselves, so a new setting is searchable without being
+    ///  registered anywhere.
+    /// </summary>
+    private List<SettingsMatch> Search(string query)
+    {
+        string[] words = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (words.Length == 0)
+        {
+            return [];
+        }
+
+        List<SettingsMatch> matches = [];
+
+        foreach ((string category, string name, FrameworkElement root) in Categories())
+        {
+            foreach (Border card in SettingsSearch.Cards(root))
+            {
+                string text = name + " " + string.Join(' ', SettingsSearch.Words(card));
+
+                if (words.All(word => text.Contains(word, StringComparison.OrdinalIgnoreCase)))
+                {
+                    matches.Add(new SettingsMatch(SettingsSearch.Title(card), name, category, card));
+                }
+            }
+        }
+
+        return matches;
+    }
+
+    private IEnumerable<(string Category, string Name, FrameworkElement Root)> Categories()
+    {
+        yield return ("general", "General", GeneralSection);
+        yield return ("gitconfig", "Git config", GitConfigSection);
+
+        if (MaintenanceCategory.Visibility == Visibility.Visible)
+        {
+            yield return ("maintenance", "Maintenance", MaintenanceSection);
+        }
+    }
+
+    /// <summary>Opens the match's category, scrolls its card into view and outlines it for a moment.</summary>
+    private async Task RevealAsync(SettingsMatch match)
+    {
+        await ShowCategoryAsync(match.CategoryKey);
+        await Task.Delay(50);
+
+        match.Card.StartBringIntoView(new BringIntoViewOptions { VerticalAlignmentRatio = 0.1, AnimationDesired = true });
+
+        Brush original = match.Card.BorderBrush;
+        Thickness thickness = match.Card.BorderThickness;
+        match.Card.BorderBrush = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"];
+        match.Card.BorderThickness = new Thickness(2);
+
+        await Task.Delay(1600);
+
+        match.Card.BorderBrush = original;
+        match.Card.BorderThickness = thickness;
+    }
+
+    private void LoadGeneral()
     {
         _isLoading = true;
 
@@ -80,7 +233,6 @@ public sealed partial class SettingsView : RepositoryPage
         // Not awaited: the answer arrives when gh has given it, and the rest of the page is usable
         // in the meantime.
         _ = ShowGitHubStatusAsync(refresh: false);
-        return Task.CompletedTask;
     }
 
     // ---- GitHub ---------------------------------------------------------------------------------

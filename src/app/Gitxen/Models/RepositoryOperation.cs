@@ -76,7 +76,7 @@ public sealed record RepositoryOperation(
     public string Message => Kind switch
     {
         RepositoryOperationKind.Bisect =>
-            "Mark the checked-out commit good or bad from the History page, or reset to finish.",
+            "Mark the checked-out commit good or bad from the Timeline page, or reset to finish.",
         _ => ConflictCount > 0
             ? $"{ConflictCount} file(s) still have conflicts. Resolve them and stage each one, then continue."
             : "Nothing is conflicted. Continue to carry on, or abort to return to where you started."

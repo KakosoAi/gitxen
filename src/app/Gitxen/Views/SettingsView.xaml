@@ -6,11 +6,62 @@
     xmlns:theming="using:Gitxen.Theming"
     xmlns:views="using:Gitxen.Views">
 
-    <ScrollViewer>
-        <StackPanel Padding="20,16,20,24" Spacing="16" MaxWidth="760" HorizontalAlignment="Left">
+    <!--
+        Settings holds three groups: the app's own options (General), this repository's git
+        configuration, and its maintenance. A search box across all three finds a setting by any word
+        on its card and jumps to it.
+    -->
+    <Grid RowDefinitions="Auto,*">
+        <StackPanel Grid.Row="0" Padding="20,16,20,8" Spacing="10">
+            <TextBlock Text="Settings" Style="{StaticResource PageTitleStyle}" />
+            <AutoSuggestBox x:Name="SearchBox" Width="420" HorizontalAlignment="Left"
+                            PlaceholderText="Search settings" QueryIcon="Find"
+                            TextMemberPath="Title" UpdateTextOnSelect="False"
+                            TextChanged="SearchBox_TextChanged"
+                            SuggestionChosen="SearchBox_SuggestionChosen"
+                            QuerySubmitted="SearchBox_QuerySubmitted"
+                            AutomationProperties.Name="Search settings">
+                <AutoSuggestBox.ItemTemplate>
+                    <DataTemplate x:DataType="views:SettingsMatch">
+                        <StackPanel Padding="0,4,0,4">
+                            <TextBlock Text="{x:Bind Title}" />
+                            <TextBlock Text="{x:Bind Category}" Style="{StaticResource PageSubtitleStyle}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </AutoSuggestBox.ItemTemplate>
+            </AutoSuggestBox>
+        </StackPanel>
+
+        <!-- The star column is last, per the layout constraint this app lives with. -->
+        <Grid Grid.Row="1" ColumnDefinitions="200,*">
+            <ListView x:Name="CategoryList" Grid.Column="0" Padding="12,4,8,0" SelectionMode="Single"
+                      SelectionChanged="CategoryList_SelectionChanged">
+                <ListViewItem Tag="general">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <FontIcon Glyph="&#xE713;" FontSize="{StaticResource IconSizeSmall}" />
+                        <TextBlock Text="General" />
+                    </StackPanel>
+                </ListViewItem>
+                <ListViewItem Tag="gitconfig">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <FontIcon Glyph="&#xE9F5;" FontSize="{StaticResource IconSizeSmall}" />
+                        <TextBlock Text="Git config" />
+                    </StackPanel>
+                </ListViewItem>
+                <ListViewItem x:Name="MaintenanceCategory" Tag="maintenance">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <FontIcon Glyph="&#xE90F;" FontSize="{StaticResource IconSizeSmall}" />
+                        <TextBlock Text="Maintenance" />
+                    </StackPanel>
+                </ListViewItem>
+            </ListView>
+
+            <Grid Grid.Column="1">
+    <ScrollViewer x:Name="GeneralSection">
+        <StackPanel Padding="20,8,20,24" Spacing="16" MaxWidth="760" HorizontalAlignment="Left">
 
             <StackPanel Spacing="2">
-                <TextBlock Text="Settings" Style="{StaticResource PageTitleStyle}" />
+                <TextBlock Text="General" Style="{StaticResource PageTitleStyle}" />
                 <TextBlock Text="Applies to every open repository."
                            Style="{StaticResource PageSubtitleStyle}" />
             </StackPanel>
@@ -431,4 +482,10 @@
             </Border>
         </StackPanel>
     </ScrollViewer>
+
+                <views:GitConfigView x:Name="GitConfigSection" Tab="{x:Bind Tab, Mode=OneWay}" Visibility="Collapsed" />
+                <views:MaintenanceView x:Name="MaintenanceSection" Tab="{x:Bind Tab, Mode=OneWay}" Visibility="Collapsed" />
+            </Grid>
+        </Grid>
+    </Grid>
 </views:RepositoryPage>

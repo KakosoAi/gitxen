@@ -52,6 +52,14 @@
                 </NavigationViewItem.Icon>
             </NavigationViewItem>
 
+            <!-- The commit history, named for what it shows. The tag stays "history" so saved sessions
+                 and deep links keep working. -->
+            <NavigationViewItem Tag="history" Content="Timeline" IsSelected="True">
+                <NavigationViewItem.Icon>
+                    <FontIcon Glyph="&#xE81C;" />
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
+
             <NavigationViewItem Tag="files" Content="Files">
                 <NavigationViewItem.Icon>
                     <FontIcon Glyph="&#xEC50;" />
@@ -78,14 +86,8 @@
                 </NavigationViewItem.InfoBadge>
             </NavigationViewItem>
 
-            <NavigationViewItem Tag="history" Content="History" IsSelected="True">
-                <NavigationViewItem.Icon>
-                    <FontIcon Glyph="&#xE81C;" />
-                </NavigationViewItem.Icon>
-            </NavigationViewItem>
-
             <!--
-                Reflog, submodules, worktrees and maintenance are Advanced-only. Simple is not a
+                Reflog, submodules and worktrees are Advanced-only (as is Maintenance, in Settings). Simple is not a
                 lesser version of the app so much as the everyday one: these four are for getting out
                 of trouble or for repositories shaped a particular way, and a beginner meeting them
                 on day one learns nothing useful from them.
@@ -167,19 +169,7 @@
         </NavigationView.MenuItems>
 
         <NavigationView.FooterMenuItems>
-            <NavigationViewItem Tag="gitconfig" Content="Git config">
-                <NavigationViewItem.Icon>
-                    <FontIcon Glyph="&#xE9F5;" />
-                </NavigationViewItem.Icon>
-            </NavigationViewItem>
-
-            <NavigationViewItem Tag="maintenance" Content="Maintenance"
-                                Visibility="{x:Bind Tab.AdvancedVisibility, Mode=OneWay}">
-                <NavigationViewItem.Icon>
-                    <FontIcon Glyph="&#xE90F;" />
-                </NavigationViewItem.Icon>
-            </NavigationViewItem>
-
+            <!-- Git config and Maintenance live inside Settings, as its other categories. -->
             <NavigationViewItem Tag="settings" Content="Settings">
                 <NavigationViewItem.Icon>
                     <FontIcon Glyph="&#xE713;" />
@@ -429,8 +419,6 @@
                 <views:PullRequestsView x:Name="PullRequestsPage" Tab="{x:Bind Tab, Mode=OneWay}" Visibility="Collapsed" />
                 <views:IssuesView x:Name="IssuesPage" Tab="{x:Bind Tab, Mode=OneWay}" Visibility="Collapsed" />
                 <views:ActionsView x:Name="ActionsPage" Tab="{x:Bind Tab, Mode=OneWay}" Visibility="Collapsed" />
-                <views:GitConfigView x:Name="GitConfigPage" Tab="{x:Bind Tab, Mode=OneWay}" Visibility="Collapsed" />
-                <views:MaintenanceView x:Name="MaintenancePage" Tab="{x:Bind Tab, Mode=OneWay}" Visibility="Collapsed" />
                 <views:SettingsView x:Name="SettingsPage" Tab="{x:Bind Tab, Mode=OneWay}" Visibility="Collapsed" />
             </Grid>
 

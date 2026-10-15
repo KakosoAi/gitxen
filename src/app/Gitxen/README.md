@@ -282,13 +282,15 @@ on and says so in its title.
 
 Each session runs its shell on a **ConPTY** (`Terminal/ConPtySession`), not on redirected stdio: a
 shell behind plain pipes knows it is not interactive — PowerShell stops prompting, bash drops its
-profile — while behind a pseudoconsole it behaves exactly as it does in Windows Terminal. The cost is
-that ConPTY output is a VT stream, and `Terminal/TerminalOutputBuffer` turns that back into plain
-lines. It is a **transcript, not a character-grid emulator**: carriage-return overwrites, backspace,
-erase sequences and cursor-positioning-as-line-break are honoured, colours are dropped, and
-full-screen programs (vim, htop) degrade to appended text — they belong in a real terminal via
-"Open in". Commands are typed into a line editor under the transcript; Enter sends the line, Up/Down
-recall history, Ctrl+C in the empty box interrupts.
+profile — while behind a pseudoconsole it behaves exactly as it does in Windows Terminal. The VT stream
+it prints goes unchanged to **xterm.js** (MIT, bundled in `Assets/Terminal/`) in a WebView2, one per
+session, and what is typed there goes straight back — so colours, prompts such as Oh My Posh and
+full-screen programs work, and switching sessions keeps each screen as it was. The font, size, cursor
+and colour scheme are read from the user's Windows Terminal settings
+(`Terminal/WindowsTerminalLook`). Ctrl+C copies a selection and otherwise interrupts, Ctrl+V and
+right-click paste, Ctrl+` hides the pane, and a toolbar button opens the folder in Windows Terminal
+itself, which cannot be hosted inside another window. WebView2 keeps its data in
+`%LOCALAPPDATA%\Gitxen\WebView2`, since the install folder is not writable.
 
 Two things about ConPTY that are not obvious:
 
@@ -330,7 +332,7 @@ to the window already open rather than opening another: one window per installat
 development build never hands over to the installed copy.
 
 The app opens on the **quick launcher**: "What are we building today?" and one search box over
-every repository Gitxen knows, ranked like the go-to palette. Enter opens the choice on its History
+every repository Gitxen knows, ranked like the go-to palette. Enter opens the choice on its Timeline
 page; Esc goes to wherever the session left off; Ctrl+K brings it back over any page. Settings can
 turn it off, and it is skipped when Gitxen is started with a folder.
 
@@ -349,24 +351,25 @@ you can create, colour, give an icon, collapse, and drag repositories in and out
 is stored as paths, so a group survives its repositories being closed or temporarily unavailable.
 
 Changes: staged and unstaged lists, stage/unstage per file and for all, **hunk-level staging**,
-discard, commit, amend, sign-off. History: graph lanes, ref badges, current-branch or all-branches
+discard, commit, amend, sign-off. Timeline (the commit history, second in the sidebar): graph lanes, ref badges, current-branch or all-branches
 scope, client-side filter plus a real `git log` search (message, author, content via `-S`, path),
 commit details, per-commit context menu (cherry-pick, revert, rebase, reset, bisect, branch, tag,
 checkout, copy), and — for a repository on GitHub — each commit's Actions result as a mark on its row
 and a Checks list in its details, each opening the run in the browser. The commit list fills the page; clicking a changed file opens a **file viewer** over its right side
 (Esc or its close button shut it, its left edge drags) with the diff, and **Blame** and **File
 history** open beside it (either or both); double-clicking
-a line or a commit selects that commit in the list. History is the page a repository opens on.
+a line or a commit selects that commit in the list.
 Reflog with recovery actions. Conflict resolution: a side per file, a merge tool, or resolve by hand
 and mark it done. Paused merges, rebases and cherry-picks are detected and shown as a banner with
 their own continue/skip/abort. Branches (local and remote), Remotes, Tags, Stashes,
-Submodules, Worktrees, Maintenance, Settings. Fetch / pull / push with options, and continue/abort for
+Submodules, Worktrees, and Settings — which also holds the repository's Git config and Maintenance,
+with a search box that finds any setting by the words on its card. Fetch / pull / push with options, and continue/abort for
 a paused merge, rebase, cherry-pick or revert. A dockable bottom terminal (Ctrl+`) with real shells
 on ConPTY — PowerShell, cmd, Git Bash, WSL — described above.
 
 GitHub, for repositories whose remote is on github.com: **Pull requests** (list with state, mine and
 search filters, CI status filled in after the list; the selected one in full — conversation, changed
-files with the same diff panel as History, checks — and check out, merge, close, reopen, mark ready,
+files with the same diff panel as Timeline, checks — and check out, merge, close, reopen, mark ready,
 review, comment, create), **Issues** (list, detail, comment, close with a reason, reopen, create) and
 **Actions** (runs with jobs and steps, failed-step and full logs, re-run all or failed, cancel, run a
 workflow; a run that is still going refreshes every ten seconds while its page is showing). It is all

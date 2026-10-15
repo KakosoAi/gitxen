@@ -1060,7 +1060,7 @@ public sealed class RepositoryTabViewModel : ShellTab
     ///  apart: a section hidden in the markup but missing from this list would stay selected with no
     ///  item to show for it.
     /// </remarks>
-    public static IReadOnlyList<string> AdvancedSections { get; } = ["reflog", "submodules", "worktrees", "maintenance"];
+    public static IReadOnlyList<string> AdvancedSections { get; } = ["reflog", "submodules", "worktrees"];
 
     /// <summary>Column headers, branch/path line: everything except Zen.</summary>
     public Visibility ChromeVisibility => Mode == UiMode.Zen ? Visibility.Collapsed : Visibility.Visible;
