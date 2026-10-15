@@ -1,4 +1,4 @@
-﻿name: Gitxen release
+name: Gitxen release
 
 # Triggered by Gitxen's own tags (gitxen-v1.2.3), which is also what install.ps1 looks for.
 
@@ -106,7 +106,7 @@ jobs:
         run: ./setup/gitxen/build/Build-Gitxen.ps1 -Version ${{ steps.version.outputs.version }} -Msix
 
       - name: Upload distribution files
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: gitxen-${{ steps.version.outputs.version }}-dist
           path: |
@@ -117,7 +117,7 @@ jobs:
           retention-days: 14
 
       - name: Upload package manifests
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           # Rendered with this release's URLs and checksums, for the publish jobs below and for
           # submitting by hand where a channel is not wired up yet.
