@@ -1,4 +1,4 @@
-﻿name: Gitxen release
+name: Gitxen release
 
 # Triggered by Gitxen's own tags (gitxen-v1.2.3), which is also what install.ps1 looks for.
 
@@ -47,7 +47,7 @@ jobs:
           global-json-file: global.json
 
       - name: Cache NuGet packages
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.nuget/packages
           key: nuget-gitxen-${{ hashFiles('Directory.Packages.props') }}
