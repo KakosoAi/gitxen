@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Gitxen</title>
+<meta name="description" content="A fast, honest git client for Windows. Runs the git you already have, shows every command it ran, and is free and open source under the GPL." />
+<meta property="og:title" content="Gitxen — a git client for Windows" />
+<meta property="og:description" content="Runs the git you already have and shows every command it ran. Free and open source under the GPL." />
+<meta property="og:image" content="https://gitxen.kakoso.ai/assets/overview.png" />
+<meta property="og:url" content="https://gitxen.kakoso.ai/" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" type="image/png" href="assets/gitxen-128.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Martian+Mono:wght@500;700&display=swap" />
+<style>
+/* Layout: the page is a commit history. A branch rail runs down the left; every section is a commit
+   on it, with a short hash and a conventional-commit subject as its heading. Dark-first. */
+:root {
+  --bg: #15171c;
+  --surface: #1d2027;
+  --raised: #252a33;
+  --line: #313744;
+  --fg: #dcdfe4;
+  --muted: #8f97a6;
+  --accent: #61afef;      /* branch blue: links, HEAD */
+  --added: #98c379;       /* diff +, success */
+  --removed: #e06c75;     /* diff − */
+  --merge: #c678dd;       /* merge commits, side branch */
+  --tag: #e5c07b;         /* tags, releases */
+  --on-accent: #0f1115;
+  --display: "Martian Mono", "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --code: "JetBrains Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
+  --rail: 28px;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f7f8fa; --surface: #ffffff; --raised: #eef1f5; --line: #d8dde5;
+    --fg: #1f242c; --muted: #5b6474; --accent: #1f6fd1; --added: #2f7d32;
+    --removed: #c0392b; --merge: #8e44ad; --tag: #9a6a00; --on-accent: #ffffff;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f7f8fa; --surface: #ffffff; --raised: #eef1f5; --line: #d8dde5;
+  --fg: #1f242c; --muted: #5b6474; --accent: #1f6fd1; --added: #2f7d32;
+  --removed: #c0392b; --merge: #8e44ad; --tag: #9a6a00; --on-accent: #ffffff;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { animation: none !important; transition: none !important; } }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 var(--body); padding-inline: 20px; }
+img { max-width: 100%; display: block; }
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+code, pre, kbd { font-family: var(--code); font-size: 0.875rem; }
+
+.wrap { max-width: 1080px; margin-inline: auto; }
+
+/* ---- Refs bar ----------------------------------------------------------------------------- */
+.refs {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+  margin-inline: -20px; padding: 10px 20px;
+}
+.refs .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.brand { display: flex; align-items: center; gap: 10px; margin-right: auto; color: var(--fg); text-decoration: none; font: 700 1rem var(--display); letter-spacing: -0.02em; }
+.brand img { width: 26px; height: 26px; }
+.ref {
+  font: 500 0.75rem var(--code); text-decoration: none; white-space: nowrap;
+  padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted);
+}
+.ref:hover { color: var(--fg); border-color: var(--muted); }
+.ref.head { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+.ref.tag { color: var(--tag); border-color: color-mix(in srgb, var(--tag) 45%, transparent); }
+.ref.tag::before { content: "tag: "; opacity: 0.7; }
+
+/* ---- The rail ----------------------------------------------------------------------------- */
+.history { position: relative; padding-left: calc(var(--rail) + 18px); padding-block: 8px 40px; }
+.history::before {
+  content: ""; position: absolute; left: calc(var(--rail) / 2 - 1px); top: 0; bottom: 0; width: 2px;
+  background: linear-gradient(var(--accent), var(--accent) 85%, transparent);
+  opacity: 0.55;
+}
+.commit { position: relative; padding-block: 56px 8px; scroll-margin-top: 64px; }
+.commit::before {
+  content: ""; position: absolute; left: calc(-18px - var(--rail) / 2 - 7px); top: 63px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--bg); border: 3px solid var(--accent);
+}
+.commit.merge::before { border-color: var(--merge); }
+.commit.release::before { border-color: var(--tag); }
+.sha { font: 500 0.8rem var(--code); color: var(--muted); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sha b { color: var(--tag); font-weight: 500; }
+.sha .ref { font-size: 0.7rem; padding: 1px 8px; }
+.subject { font: 700 clamp(1.3rem, 2.6vw, 1.75rem)/1.25 var(--display); letter-spacing: -0.03em; margin: 6px 0 10px; text-wrap: balance; }
+.subject .type { color: var(--accent); }
+.commit.merge .subject .type { color: var(--merge); }
+.lede { color: var(--muted); max-width: 62ch; margin: 0 0 24px; }
+
+/* A side branch that leaves the rail and merges back, drawn between two commits. */
+.branchoff { position: relative; height: 54px; margin-left: calc(-18px - var(--rail)); width: 120px; }
+.branchoff svg { width: 120px; height: 54px; overflow: visible; }
+.branchoff path { fill: none; stroke: var(--merge); stroke-width: 2; opacity: 0.8; }
+.branchoff circle { fill: var(--bg); stroke: var(--merge); stroke-width: 2.5; }
+
+/* ---- Hero --------------------------------------------------------------------------------- */
+.hero .subject { font-size: clamp(2rem, 5.5vw, 3.6rem); line-height: 1.08; letter-spacing: -0.045em; margin-block: 14px 18px; max-width: 16ch; }
+.hero .subject em { font-style: normal; color: var(--added); }
+.hero .lede { font-size: 1.1rem; }
+
+.install { display: grid; gap: 12px; max-width: 720px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tabs button {
+  font: 500 0.8rem var(--code); color: var(--muted); background: transparent; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px;
+}
+.tabs button[aria-selected="true"] { color: var(--fg); background: var(--raised); border-color: var(--muted); }
+.cmd {
+  display: flex; align-items: center; gap: 12px; min-width: 0;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
+}
+.cmd code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; color: var(--fg); }
+.cmd code::before { content: "PS> "; color: var(--added); }
+.cmd.note code::before { content: "# "; color: var(--muted); }
+.copy {
+  flex: none; font: 500 0.75rem var(--code); color: var(--fg); background: var(--raised);
+  border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer;
+}
+.copy[data-done] { color: var(--added); border-color: var(--added); }
+.fine { color: var(--muted); font-size: 0.85rem; margin: 0; }
+
+.shot {
+  margin-top: 36px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line);
+  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.6);
+  background: var(--surface);
+}
+.shot .bar { display: flex; gap: 6px; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+.shot .bar i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+
+/* ---- Feature diffs ------------------------------------------------------------------------ */
+.diffs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap: 16px; }
+.diff { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; min-width: 0; }
+.diff header { font: 500 0.78rem var(--code); color: var(--muted); padding: 9px 14px; border-bottom: 1px solid var(--line); background: var(--raised); display: flex; justify-content: space-between; gap: 8px; }
+.diff header b { color: var(--fg); font-weight: 500; }
+.diff pre { margin: 0; padding: 10px 0; overflow-x: auto; line-height: 1.55; }
+.diff pre span { display: block; padding: 1px 14px; white-space: pre; }
+.diff .h { color: var(--merge); }
+.diff .del { color: var(--removed); background: color-mix(in srgb, var(--removed) 10%, transparent); }
+.diff .add { color: var(--added); background: color-mix(in srgb, var(--added) 10%, transparent); }
+.diff p { margin: 0; padding: 0 14px 14px; color: var(--muted); font-size: 0.92rem; }
+
+/* ---- Terminal ----------------------------------------------------------------------------- */
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 28px; align-items: start; }
+.split > * { min-width: 0; }
+.term { background: #0f1115; color: #dcdfe4; border-radius: 8px; border: 1px solid var(--line); overflow: hidden; }
+.term .bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #1b1e24; font: 500 0.75rem var(--code); color: #8f97a6; }
+.term pre { margin: 0; padding: 14px 16px 18px; overflow-x: auto; line-height: 1.6; }
+.term .p { color: #98c379; } .term .b { color: #61afef; } .term .m { color: #8f97a6; } .term .y { color: #e5c07b; } .term .v { color: #c678dd; }
+.term .cursor { display: inline-block; width: 0.6em; height: 1.1em; vertical-align: text-bottom; background: #dcdfe4; animation: blink 1.1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.points { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.points li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; }
+.points li::before { content: "+"; font: 700 1rem var(--code); color: var(--added); }
+.points b { font-weight: 600; }
+
+/* ---- Principles as git config ------------------------------------------------------------- */
+.config { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 0; overflow-x: auto; }
+.config div { display: grid; grid-template-columns: minmax(200px, 300px) 1fr; gap: 16px; padding: 10px 18px; border-bottom: 1px solid var(--line); }
+.config div:last-child { border-bottom: 0; }
+.config code { color: var(--accent); }
+.config code em { font-style: normal; color: var(--fg); }
+.config span { color: var(--muted); font-size: 0.95rem; }
+@media (max-width: 640px) { .config div { grid-template-columns: 1fr; gap: 4px; } }
+
+/* ---- Open source ---------------------------------------------------------------------------- */
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; font: 500 0.9rem var(--body); text-decoration: none;
+  padding: 10px 16px; border-radius: 8px; border: 1px solid var(--line); color: var(--fg); background: var(--surface);
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+/* ---- Releases log ------------------------------------------------------------------------- */
+.log { list-style: none; margin: 0; padding: 0; font: 0.9rem var(--code); }
+.log li { display: flex; flex-wrap: wrap; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+.log .hash { color: var(--tag); }
+.log a { color: var(--fg); text-decoration: none; }
+.log a:hover { color: var(--accent); }
+.log time { color: var(--muted); margin-left: auto; }
+
+footer { border-top: 1px solid var(--line); margin-inline: -20px; padding: 22px 20px calc(22px + env(safe-area-inset-bottom, 0px)); color: var(--muted); font-size: 0.85rem; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+footer a { color: var(--muted); }
+
+@media (max-width: 560px) {
+  :root { --rail: 16px; }
+  .history { padding-left: calc(var(--rail) + 12px); }
+  .commit::before { left: calc(-12px - var(--rail) / 2 - 7px); }
+  .branchoff { margin-left: calc(-12px - var(--rail)); }
+  .refs .ref:not(.head):not(.tag) { display: none; }
+}
+</style>
+</head>
+<body>
+
+<nav class="refs" aria-label="Sections">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="assets/gitxen-128.png" alt="" width="26" height="26" />gitxen</a>
+    <a class="ref head" href="#top">HEAD → main</a>
+    <a class="ref" href="#features">features</a>
+    <a class="ref" href="#terminal">terminal</a>
+    <a class="ref" href="#principles">principles</a>
+    <a class="ref" href="#source">open-source</a>
+    <a class="ref tag" href="#install" id="nav-tag">v0.11.0</a>
+  </div>
+</nav>
+
+<main class="wrap history" id="top">
+
+  <!-- Hero -->
+  <section class="commit hero" id="install">
+    <div class="sha"><b id="hero-sha">99b858c</b> <span class="ref head">HEAD → main</span> <span class="ref tag" id="hero-tag">v0.11.0</span> <span>beta</span></div>
+    <h1 class="subject">A fast, <em>honest</em> git client for Windows.</h1>
+    <p class="lede">Gitxen runs the git you already have and shows you every command it ran. Stage by hunk, rebase by dragging, find any commit in any repository. Free and open source under the GPL.</p>
+
+    <div class="install">
+      <div class="tabs" role="tablist" aria-label="Install with">
+        <button role="tab" id="tab-ps" aria-selected="true" data-cmd="irm https://raw.githubusercontent.com/KakosoAi/gitxen/main/setup/gitxen/install.ps1 | iex" data-note="Per user, no admin rights needed. Checks the download against its published SHA-256.">PowerShell</button>
+        <button role="tab" id="tab-scoop" aria-selected="false" data-cmd="scoop bucket add kakoso https://github.com/KakosoAi/scoop-bucket; scoop install kakoso/gitxen" data-note="From Kakoso's Scoop bucket. Puts gitxen and gx on PATH.">Scoop</button>
+        <button role="tab" id="tab-winget" aria-selected="false" data-cmd="winget install Kakoso.Gitxen" data-note="Submitted to winget and waiting for review. Until it is accepted, use PowerShell, Scoop or the installer.">winget</button>
+        <button role="tab" id="tab-msi" aria-selected="false" data-cmd="https://github.com/KakosoAi/gitxen/releases/latest" data-note="MSI installer or portable zip from GitHub Releases. Self-contained: no .NET install needed." data-link="true">Installer</button>
+      </div>
+      <div class="cmd" id="cmd"><code id="cmd-text">irm https://raw.githubusercontent.com/KakosoAi/gitxen/main/setup/gitxen/install.ps1 | iex</code><button class="copy" id="copy" type="button">Copy</button></div>
+      <p class="fine" id="cmd-note">Per user, no admin rights needed. Checks the download against its published SHA-256.</p>
+      <p class="fine">Windows 10 (1809) or later, x64. Needs <a href="https://git-scm.com/download/win">git</a> installed.</p>
+    </div>
+
+    <figure class="shot" style="margin-inline:0">
+      <div class="bar" aria-hidden="true"><i></i><i></i><i></i></div>
+      <img src="assets/overview.png" alt="Gitxen's Overview page for a repository: commit and contributor counts, commits over time, the language breakdown and a twelve-month activity grid." width="2100" height="971" loading="eager" />
+    </figure>
+  </section>
+
+  <!-- Features -->
+  <section class="commit" id="features">
+    <div class="sha"><b>4f1c2ae</b></div>
+    <h2 class="subject"><span class="type">feat:</span> the everyday git work, without the ceremony</h2>
+    <p class="lede">Each card is a diff. Red is the way it is usually done; green is what Gitxen does instead.</p>
+
+    <div class="diffs">
+      <article class="diff">
+        <header><b>timeline</b><span>+1 −1</span></header>
+        <pre><span class="h">@@ reading history @@</span><span class="del">- git log --graph --oneline --all | less</span><span class="add">+ Timeline: lanes, ref badges, CI result per commit</span></pre>
+        <p>Two-line rows with author chips. Filter as you type, or search messages, authors and content with <code>-S</code> and <code>-G</code>.</p>
+      </article>
+      <article class="diff">
+        <header><b>staging</b><span>+1 −1</span></header>
+        <pre><span class="h">@@ staging part of a file @@</span><span class="del">- git add -p   # y n q a d s e ?</span><span class="add">+ click the hunk you want staged</span></pre>
+        <p>Stage, unstage and discard per file or per hunk. Amend and sign-off are one click.</p>
+      </article>
+      <article class="diff">
+        <header><b>rebase</b><span>+1 −1</span></header>
+        <pre><span class="h">@@ cleaning up a branch @@</span><span class="del">- git rebase -i HEAD~8   # pick… squash… in vim</span><span class="add">+ drag to reorder; reword, squash, fix up, drop</span></pre>
+        <p>A visual interactive rebase that shows what each step does before it runs, and undo when it did not go to plan.</p>
+      </article>
+      <article class="diff">
+        <header><b>search</b><span>+1 −1</span></header>
+        <pre><span class="h">@@ "which repo was that in?" @@</span><span class="del">- cd ../repo-a &amp;&amp; git log --grep … ; cd ../repo-b …</span><span class="add">+ Ctrl+K finds a commit in every repository</span></pre>
+        <p>A local full-text index of every repository you open. Also from the command line: <code>gx search</code>.</p>
+      </article>
+      <article class="diff">
+        <header><b>guard</b><span>+1 −1</span></header>
+        <pre><span class="h">@@ before it leaves your machine @@</span><span class="del">- git push   # …and the .env went with it</span><span class="add">+ warns about keys, tokens and 100 MB files first</span></pre>
+        <p>Checks what you are about to commit or push for cloud keys, tokens, private keys and files too big for GitHub.</p>
+      </article>
+      <article class="diff">
+        <header><b>github</b><span>+1 −1</span></header>
+        <pre><span class="h">@@ pull requests, issues, Actions @@</span><span class="del">- alt-tab to the browser, find the run, scroll the log</span><span class="add">+ PRs, issues and failed steps beside the code</span></pre>
+        <p>Through the GitHub CLI you already use. Each repository acts as the account that can see it.</p>
+      </article>
+    </div>
+  </section>
+
+  <div class="branchoff" aria-hidden="true">
+    <svg viewBox="0 0 120 54"><path d="M23 0 C23 18, 70 14, 70 27 C70 40, 23 36, 23 54" /><circle cx="70" cy="27" r="5" /></svg>
+  </div>
+
+  <!-- Terminal -->
+  <section class="commit merge" id="terminal">
+    <div class="sha"><b>c0ffee1</b> <span>Merge branch 'terminal'</span></div>
+    <h2 class="subject"><span class="type">merge:</span> your terminal, inside the app</h2>
+    <p class="lede">The bottom pane runs your real shell in the repository's folder, drawn the way Windows Terminal draws it. Your prompt, your font, your colours.</p>
+
+    <div class="split">
+      <div class="term" role="img" aria-label="A PowerShell session in Gitxen's terminal pane running gx stats and gx search.">
+        <div class="bar"><span>PowerShell 7 — gitxen</span></div>
+<pre><span class="b">~/gitxen</span> <span class="v">main</span> <span class="p">❯</span> gx stats
+gitxen  <span class="m">at</span> <span class="y">99b858c3</span>
+
+  <span class="m">Commits</span>       23         <span class="m">last just now</span>
+  <span class="m">Contributors</span>  2          <span class="m">most: tamujin</span>
+  <span class="m">Files</span>         327        <span class="m">2.4 MB</span>
+  <span class="m">Lines</span>         47,995     <span class="m">in text files</span>
+
+  C#     <span class="p">██████████████████</span><span class="m">░░░░░░░░░░</span>  64.7%
+  XAML   <span class="p">█████</span><span class="m">░░░░░░░░░░░░░░░░░░░░░░░</span>  19.5%
+
+<span class="b">~/gitxen</span> <span class="v">main</span> <span class="p">❯</span> gx search "targeting pack"
+<span class="y">8d1620b</span>  gitxen  fix(build): download the Windows SDK
+          targeting pack so a clean machine builds
+
+<span class="b">~/gitxen</span> <span class="v">main</span> <span class="p">❯</span> <span class="cursor"></span></pre>
+      </div>
+
+      <ul class="points">
+        <li><span><b>A real terminal.</b> PowerShell, cmd, Git Bash or WSL on a pseudoconsole, so prompts such as Oh My Posh, colours and full-screen programs all work.</span></li>
+        <li><span><b>Looks like Windows Terminal.</b> Font, size, cursor and colour scheme are read from your Windows Terminal settings. One click opens the folder there instead.</span></li>
+        <li><span><b><code>gx</code> on the command line.</b> Repository stats, search across repositories, new repositories from a template, and a GitHub account per repository for push and pull.</span></li>
+        <li><span><b>Watch what Gitxen runs.</b> Press F12 for every git command, its output and how long it took.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Principles -->
+  <section class="commit" id="principles">
+    <div class="sha"><b>a11ce55</b></div>
+    <h2 class="subject"><span class="type">docs:</span> how it behaves</h2>
+    <p class="lede">The promises, written the way git stores settings.</p>
+
+    <div class="config" role="list">
+      <div role="listitem"><code>gitxen.<em>git</em>=yours</code><span>Runs the git.exe you installed, as a separate program. Nothing is re-implemented, so the result is what git says.</span></div>
+      <div role="listitem"><code>gitxen.<em>telemetry</em>=none</code><span>No usage data, no analytics, no account of its own.</span></div>
+      <div role="listitem"><code>gitxen.<em>tokens</em>=held-by-gh</code><span>GitHub sign-in stays in the GitHub CLI. Gitxen asks it for a token per command and never stores one.</span></div>
+      <div role="listitem"><code>gitxen.<em>ai</em>=opt-in</code><span>AI-written commit messages only if you add your own Anthropic key; it is kept in Windows Credential Manager.</span></div>
+      <div role="listitem"><code>gitxen.<em>license</em>=GPL-3.0-or-later</code><span>Free to use, study, change and share. A copy you distribute stays open too.</span></div>
+    </div>
+  </section>
+
+  <!-- Open source -->
+  <section class="commit" id="source">
+    <div class="sha"><b>f055c0d</b></div>
+    <h2 class="subject"><span class="type">chore:</span> built in the open</h2>
+    <p class="lede">The code, the issues and the releases are all on GitHub. Small fixes and good first issues are the easiest way in; contributors sign a short CLA once.</p>
+    <div class="actions">
+      <a class="btn primary" href="https://github.com/KakosoAi/gitxen">Star on GitHub</a>
+      <a class="btn" href="https://github.com/KakosoAi/gitxen/issues?q=is%3Aopen+label%3A%22good+first+issue%22">Good first issues</a>
+      <a class="btn" href="https://github.com/KakosoAi/gitxen/blob/main/CONTRIBUTING.md">Contributing</a>
+      <a class="btn" href="https://github.com/KakosoAi/gitxen/blob/main/ROADMAP.md">Roadmap</a>
+    </div>
+  </section>
+
+  <!-- Releases -->
+  <section class="commit release" id="releases">
+    <div class="sha"><b>$ git log --oneline --tags</b></div>
+    <h2 class="subject"><span class="type">release:</span> what changed</h2>
+    <ul class="log" id="log">
+      <li><span class="hash">gitxen-v0.11.0</span><a href="https://github.com/KakosoAi/gitxen/releases/tag/gitxen-v0.11.0">A real terminal, searchable Settings, Timeline</a><time datetime="2026-10-15">2026-10-15</time></li>
+      <li><span class="hash">gitxen-v0.10.1</span><a href="https://github.com/KakosoAi/gitxen/releases/tag/gitxen-v0.10.1">Clean-machine builds, dependency updates</a><time datetime="2026-10-15">2026-10-15</time></li>
+      <li><span class="hash">gitxen-v0.10.0</span><a href="https://github.com/KakosoAi/gitxen/releases/tag/gitxen-v0.10.0">First public release, under the GPL</a><time datetime="2026-10-15">2026-10-15</time></li>
+    </ul>
+    <p class="fine" style="margin-top:14px"><a href="https://github.com/KakosoAi/gitxen/blob/main/CHANGELOG.md">Full changelog</a></p>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Kakoso</span>
+    <a href="https://github.com/KakosoAi/gitxen/blob/main/LICENSE">GPL-3.0-or-later</a>
+    <a href="https://github.com/KakosoAi/gitxen/blob/main/TRADEMARK.md">Trademark</a>
+    <a href="https://github.com/KakosoAi/gitxen/blob/main/SECURITY.md">Security</a>
+    <span>Not affiliated with Git or the Software Freedom Conservancy.</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  // Install tabs: each tab carries its command and a note.
+  const tabs = Array.from(document.querySelectorAll(".tabs button"));
+  const text = document.getElementById("cmd-text");
+  const note = document.getElementById("cmd-note");
+  const box = document.getElementById("cmd");
+  const copy = document.getElementById("copy");
+
+  function select(tab) {
+    tabs.forEach((t) => t.setAttribute("aria-selected", String(t === tab)));
+    text.textContent = tab.dataset.cmd;
+    note.textContent = tab.dataset.note;
+    box.classList.toggle("note", tab.dataset.link === "true");
+    copy.textContent = tab.dataset.link === "true" ? "Open" : "Copy";
+    copy.removeAttribute("data-done");
+  }
+
+  tabs.forEach((tab) => tab.addEventListener("click", () => select(tab)));
+
+  copy.addEventListener("click", () => {
+    const active = tabs.find((t) => t.getAttribute("aria-selected") === "true");
+
+    if (active && active.dataset.link === "true") {
+      const a = document.createElement("a");
+      a.href = active.dataset.cmd;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.click();
+      return;
+    }
+
+    const done = () => { copy.textContent = "Copied"; copy.setAttribute("data-done", ""); };
+    const fallback = () => {
+      const range = document.createRange();
+      range.selectNodeContents(text);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      copy.textContent = "Press Ctrl+C";
+    };
+
+    try {
+      navigator.clipboard.writeText(text.textContent).then(done, fallback);
+    } catch (_) {
+      fallback();
+    }
+  });
+
+  // Releases: the list above is the fallback; on the live site it is refreshed from GitHub.
+  fetch("https://api.github.com/repos/KakosoAi/gitxen/releases?per_page=6")
+    .then((r) => (r.ok ? r.json() : Promise.reject()))
+    .then((releases) => {
+      const list = releases.filter((r) => !r.draft && r.tag_name.startsWith("gitxen-v"));
+      if (list.length === 0) {
+        return;
+      }
+
+      const log = document.getElementById("log");
+      log.replaceChildren(...list.map((r) => {
+        const li = document.createElement("li");
+        const hash = document.createElement("span");
+        hash.className = "hash";
+        hash.textContent = r.tag_name;
+        const link = document.createElement("a");
+        link.href = r.html_url;
+        link.textContent = r.name || r.tag_name;
+        const time = document.createElement("time");
+        time.dateTime = r.published_at;
+        time.textContent = r.published_at.slice(0, 10);
+        li.append(hash, link, time);
+        return li;
+      }));
+
+      const latest = list[0].tag_name.replace("gitxen-", "");
+      document.getElementById("nav-tag").textContent = latest;
+      document.getElementById("hero-tag").textContent = latest;
+    })
+    .catch(() => { /* Offline or rate-limited: the built-in list stays. */ });
+})();
+</script>
+</body>
+</html>
