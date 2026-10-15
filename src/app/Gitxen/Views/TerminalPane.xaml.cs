@@ -1,47 +1,48 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Runtime.InteropServices;
+using System.Text.Json;
+using Gitxen.Services;
 using Gitxen.Terminal;
-using Microsoft.UI.Input;
+using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Windows.Foundation;
-using Windows.System;
-using Windows.UI.Core;
+using Microsoft.Web.WebView2.Core;
+using Windows.ApplicationModel.DataTransfer;
 
 namespace Gitxen.Views;
 
 /// <summary>
 ///  The bottom terminal: real shells — PowerShell, cmd, Git Bash, WSL — opened on the repository's
-///  working directory, without leaving the app.
+///  working directory, drawn by xterm.js.
 /// </summary>
 /// <remarks>
 ///  <para>
-///   Each session is a shell on a ConPTY, so the shell believes it is interactive and prompts,
-///   aliases and profiles all behave. The transcript is rendered as selectable text and commands are
-///   typed into a line editor underneath it, which is the honest version of what this control is: a
-///   transcript-and-a-prompt, not a character-grid emulator. Full-screen programs (vim, htop) want
-///   the latter and are better off in Windows Terminal via "Open in".
+///   Each session is a shell on a ConPTY, so prompts, profiles and Oh My Posh behave as in any
+///   console. Its output goes, unchanged, to an xterm.js surface in a WebView2 — the same renderer
+///   VS Code embeds — which handles colours, the cursor and full-screen programs, and sends what is
+///   typed straight back. The font and colours come from the user's Windows Terminal settings
+///   (<see cref="WindowsTerminalLook"/>), and the toolbar can hand the folder to Windows Terminal
+///   itself, which cannot be hosted inside another window.
 ///  </para>
 ///  <para>
-///   The pane is shared by every repository tab, like the panel in an editor: the shell instance
-///   hosting this control is the same one across tabs, so sessions survive switching. Each session
-///   is pinned to the working directory it was opened on and says so in its title.
+///   The pane is shared by every repository tab, like the panel in an editor, so sessions survive
+///   switching. Each session is pinned to the working directory it was opened on.
 ///  </para>
 /// </remarks>
 public sealed partial class TerminalPane : UserControl
 {
-    /// <summary>Fallback size for a session started before the pane has been laid out.</summary>
-    private const short DefaultColumns = 120;
-    private const short DefaultRows = 30;
+    /// <summary>Until xterm.js has measured itself; it reports the real size as soon as it has.</summary>
+    private const short InitialColumns = 120;
+    private const short InitialRows = 30;
 
-    /// <summary>One monospace cell at the output font, measured once on load.</summary>
-    private Size _cell;
+    private const string VirtualHost = "terminal.gitxen.local";
 
-    /// <summary>The session whose Text changes are currently being shown.</summary>
-    private TerminalSession? _displayed;
+    private static Task<CoreWebView2Environment>? _environment;
+
+    private readonly Dictionary<TerminalSession, Surface> _surfaces = [];
+    private WindowsTerminalLook? _look;
 
     public TerminalPane()
     {
@@ -67,19 +68,24 @@ public sealed partial class TerminalPane : UserControl
         }
     }
 
-    public void FocusInput() => InputBox.Focus(FocusState.Programmatic);
+    /// <summary>Puts the keyboard in the visible terminal.</summary>
+    public void FocusTerminal()
+    {
+        if (Active is TerminalSession session && _surfaces.TryGetValue(session, out Surface? surface))
+        {
+            surface.Focus();
+        }
+    }
 
     /// <summary>Ends every session. The window calls this on close so no shell outlives the app.</summary>
     public void DisposeAll()
     {
         foreach (TerminalSession session in Sessions.ToList())
         {
-            session.PropertyChanged -= Session_PropertyChanged;
-            session.Dispose();
+            End(session);
         }
 
         Sessions.Clear();
-        _displayed = null;
     }
 
     private void TerminalPane_Loaded(object sender, RoutedEventArgs e)
@@ -88,8 +94,6 @@ public sealed partial class TerminalPane : UserControl
         {
             return;
         }
-
-        _cell = MeasureCell();
 
         if (TerminalShells.Available.Count == 0)
         {
@@ -112,109 +116,57 @@ public sealed partial class TerminalPane : UserControl
             ? WorkingDirectory
             : Environment.CurrentDirectory;
 
-        (short columns, short rows) = ViewportSize();
-
         TerminalSession session;
         try
         {
-            session = new TerminalSession(shell, workingDirectory, DispatcherQueue, columns, rows);
+            session = new TerminalSession(shell, workingDirectory, DispatcherQueue, InitialColumns, InitialRows);
         }
         catch (Exception ex) when (ex is Win32Exception or IOException)
         {
-            OutputText.Text = $"Could not start {shell.Name}: {ex.Message}";
+            ShowStatus($"Could not start {shell.Name}: {ex.Message}");
             return;
         }
 
-        session.PropertyChanged += Session_PropertyChanged;
+        _look ??= WindowsTerminalLook.Load();
+
+        Surface surface = new(session, _look, this);
+        _surfaces[session] = surface;
+        Surfaces.Children.Add(surface.View);
+
         Sessions.Add(session);
         SessionPicker.SelectedItem = session;
-        FocusInput();
+        _ = surface.StartAsync();
     }
 
     private TerminalSession? Active => SessionPicker.SelectedItem as TerminalSession;
 
-    private void Session_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(TerminalSession.Text) && ReferenceEquals(sender, _displayed))
-        {
-            ShowTranscript(_displayed);
-        }
-    }
-
     private void SessionPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        _displayed = Active;
-        ShowTranscript(_displayed);
-    }
-
-    /// <summary>
-    ///  Puts a session's transcript in the output, keeping the view pinned to the bottom — but only
-    ///  when it already was: someone scrolled up reading old output stays where they are.
-    /// </summary>
-    private void ShowTranscript(TerminalSession? session)
-    {
-        bool wasAtBottom = OutputScroller.VerticalOffset >= OutputScroller.ScrollableHeight - 40;
-
-        OutputText.Text = session?.Text ?? "";
-
-        if (wasAtBottom)
+        foreach ((TerminalSession session, Surface surface) in _surfaces)
         {
-            OutputScroller.UpdateLayout();
-            OutputScroller.ChangeView(null, OutputScroller.ScrollableHeight, null, disableAnimation: true);
+            surface.View.Visibility = ReferenceEquals(session, Active) ? Visibility.Visible : Visibility.Collapsed;
         }
+
+        FocusTerminal();
     }
 
-    private void InputBox_KeyDown(object sender, KeyRoutedEventArgs e)
+    private void OpenInWindowsTerminal_Click(object sender, RoutedEventArgs e)
     {
-        if (Active is not TerminalSession session)
+        string folder = Active?.WorkingDirectory ?? (Directory.Exists(WorkingDirectory) ? WorkingDirectory : "");
+
+        if (folder.Length == 0 || ExternalTools.Available.FirstOrDefault(tool => tool.Id == "terminal") is not ExternalTool terminal)
         {
+            ShowStatus("Windows Terminal was not found.");
             return;
         }
 
-        switch (e.Key)
+        string error = ExternalTools.Launch(terminal, folder);
+
+        if (error.Length > 0)
         {
-            case VirtualKey.Enter:
-                session.SendLine(InputBox.Text);
-                InputBox.Text = "";
-                e.Handled = true;
-                break;
-
-            case VirtualKey.Up:
-                RecallHistory(session, -1);
-                e.Handled = true;
-                break;
-
-            case VirtualKey.Down:
-                RecallHistory(session, +1);
-                e.Handled = true;
-                break;
-
-            case VirtualKey.C when IsControlDown() && InputBox.Text.Length == 0:
-                // Ctrl+C in an empty box is the console gesture: interrupt. With text in the box it
-                // stays what a text box means by it.
-                session.SendInterrupt();
-                e.Handled = true;
-                break;
+            ShowStatus(error);
         }
     }
-
-    private void RecallHistory(TerminalSession session, int direction)
-    {
-        if (session.History.Count == 0)
-        {
-            return;
-        }
-
-        int index = Math.Clamp(session.HistoryIndex + direction, 0, session.History.Count);
-        session.HistoryIndex = index;
-
-        InputBox.Text = index < session.History.Count ? session.History[index] : "";
-        InputBox.SelectionStart = InputBox.Text.Length;
-    }
-
-    private void Interrupt_Click(object sender, RoutedEventArgs e) => Active?.SendInterrupt();
-
-    private void Clear_Click(object sender, RoutedEventArgs e) => Active?.Clear();
 
     private void CloseSession_Click(object sender, RoutedEventArgs e)
     {
@@ -223,65 +175,204 @@ public sealed partial class TerminalPane : UserControl
             return;
         }
 
-        session.PropertyChanged -= Session_PropertyChanged;
-        session.Dispose();
+        End(session);
         Sessions.Remove(session);
 
         if (Sessions.Count > 0)
         {
             SessionPicker.SelectedItem = Sessions[^1];
         }
-        else
-        {
-            _displayed = null;
-            OutputText.Text = "";
-        }
     }
 
     private void ClosePane_Click(object sender, RoutedEventArgs e) =>
         CloseRequested?.Invoke(this, EventArgs.Empty);
 
-    /// <summary>Tells every session the pane's new size, so output wraps at the real width.</summary>
-    private void OutputScroller_SizeChanged(object sender, SizeChangedEventArgs e)
+    private void End(TerminalSession session)
     {
-        (short columns, short rows) = ViewportSize();
-
-        foreach (TerminalSession session in Sessions)
+        if (_surfaces.Remove(session, out Surface? surface))
         {
-            session.Resize(columns, rows);
+            Surfaces.Children.Remove(surface.View);
+            surface.Dispose();
         }
+
+        session.Dispose();
     }
 
-    private (short Columns, short Rows) ViewportSize()
+    private void ShowStatus(string message)
     {
-        if (_cell.Width <= 0 || OutputScroller.ActualWidth <= 0)
-        {
-            return (DefaultColumns, DefaultRows);
-        }
-
-        short columns = (short)Math.Max(20, (OutputScroller.ActualWidth - 24) / _cell.Width);
-        short rows = (short)Math.Max(5, OutputScroller.ActualHeight / _cell.Height);
-        return (columns, rows);
+        StatusText.Text = message;
+        StatusText.Visibility = Visibility.Visible;
     }
 
     /// <summary>
-    ///  Measures one cell of the output font. Measured rather than assumed, so a machine that falls
-    ///  back from Cascadia Mono to Consolas still gets accurate column counts.
+    ///  One WebView2 environment for every surface, with its data under %LOCALAPPDATA%\Gitxen: the
+    ///  default is beside the executable, which an installed app cannot write to.
     /// </summary>
-    private static Size MeasureCell()
+    private static Task<CoreWebView2Environment> SharedEnvironmentAsync() =>
+        _environment ??= CoreWebView2Environment.CreateWithOptionsAsync(
+            null,
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Gitxen", "WebView2"),
+            new CoreWebView2EnvironmentOptions()).AsTask();
+
+    /// <summary>A session's renderer: its WebView2, and the output held back until the page is ready.</summary>
+    private sealed class Surface : IDisposable
     {
-        TextBlock probe = new()
+        private readonly TerminalSession _session;
+        private readonly WindowsTerminalLook _look;
+        private readonly TerminalPane _pane;
+        private readonly List<string> _backlog = [];
+        private bool _ready;
+
+        public Surface(TerminalSession session, WindowsTerminalLook look, TerminalPane pane)
         {
-            Text = new string('M', 10),
-            FontFamily = new FontFamily("Cascadia Mono, Consolas"),
-            FontSize = 12
-        };
+            _session = session;
+            _look = look;
+            _pane = pane;
 
-        probe.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        return new Size(probe.DesiredSize.Width / 10, probe.DesiredSize.Height);
+            View = new WebView2 { DefaultBackgroundColor = ParseColour(look.Background) };
+            _session.Output += OnOutput;
+        }
+
+        public WebView2 View { get; }
+
+        public async Task StartAsync()
+        {
+            try
+            {
+                await View.EnsureCoreWebView2Async(await SharedEnvironmentAsync());
+            }
+            catch (Exception ex) when (ex is COMException or FileNotFoundException or InvalidOperationException)
+            {
+                _pane.ShowStatus($"The terminal needs the Microsoft Edge WebView2 Runtime: {ex.Message}");
+                return;
+            }
+
+            CoreWebView2 core = View.CoreWebView2;
+            core.Settings.AreDevToolsEnabled = false;
+            core.Settings.AreDefaultContextMenusEnabled = false;
+            core.Settings.AreBrowserAcceleratorKeysEnabled = false;
+            core.Settings.IsStatusBarEnabled = false;
+            core.Settings.IsZoomControlEnabled = false;
+
+            core.SetVirtualHostNameToFolderMapping(
+                VirtualHost,
+                Path.Combine(AppContext.BaseDirectory, "Assets", "Terminal"),
+                CoreWebView2HostResourceAccessKind.DenyCors);
+
+            // The page is local and fixed; nothing it does should take it anywhere else.
+            core.NavigationStarting += (_, e) =>
+                e.Cancel = !e.Uri.StartsWith($"https://{VirtualHost}/", StringComparison.OrdinalIgnoreCase);
+            core.NewWindowRequested += (_, e) => e.Handled = true;
+            core.WebMessageReceived += OnMessage;
+
+            core.Navigate($"https://{VirtualHost}/index.html");
+        }
+
+        public void Focus()
+        {
+            View.Focus(FocusState.Programmatic);
+            Post("""{"t":"focus"}""");
+        }
+
+        public void Dispose()
+        {
+            _session.Output -= OnOutput;
+            View.Close();
+        }
+
+        private void OnOutput(string chunk)
+        {
+            if (_ready)
+            {
+                Post($$"""{"t":"out","d":{{JsonSerializer.Serialize(chunk)}}}""");
+            }
+            else
+            {
+                _backlog.Add(chunk);
+            }
+        }
+
+        private void OnMessage(CoreWebView2 sender, CoreWebView2WebMessageReceivedEventArgs e)
+        {
+            if (!e.Source.StartsWith($"https://{VirtualHost}/", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            using JsonDocument document = JsonDocument.Parse(e.WebMessageAsJson);
+            JsonElement message = document.RootElement;
+
+            switch (message.TryGetProperty("t", out JsonElement type) ? type.GetString() : "")
+            {
+                case "ready":
+                    Post(InitMessage());
+                    _ready = true;
+
+                    foreach (string chunk in _backlog)
+                    {
+                        Post($$"""{"t":"out","d":{{JsonSerializer.Serialize(chunk)}}}""");
+                    }
+
+                    _backlog.Clear();
+                    break;
+
+                case "in":
+                    _session.Write(message.GetProperty("d").GetString() ?? "");
+                    break;
+
+                case "size":
+                    _session.Resize((short)message.GetProperty("cols").GetInt32(), (short)message.GetProperty("rows").GetInt32());
+                    break;
+
+                case "copy":
+                    DataPackage package = new();
+                    package.SetText(message.GetProperty("d").GetString() ?? "");
+                    Clipboard.SetContent(package);
+                    break;
+
+                case "paste":
+                    _ = PasteAsync();
+                    break;
+
+                case "hide":
+                    _pane.CloseRequested?.Invoke(_pane, EventArgs.Empty);
+                    break;
+            }
+        }
+
+        private async Task PasteAsync()
+        {
+            DataPackageView content = Clipboard.GetContent();
+
+            if (content.Contains(StandardDataFormats.Text))
+            {
+                string text = await content.GetTextAsync();
+                Post($$"""{"t":"paste","d":{{JsonSerializer.Serialize(text)}}}""");
+            }
+        }
+
+        private string InitMessage() =>
+            $$"""{"t":"init","font":{{JsonSerializer.Serialize(_look.FontFamily)}},"fontSize":{{_look.FontSizeText}},"cursor":{{JsonSerializer.Serialize(_look.Cursor)}},"theme":{{JsonSerializer.Serialize(_look.Theme)}}}""";
+
+        private void Post(string json)
+        {
+            if (View.CoreWebView2 is CoreWebView2 core)
+            {
+                core.PostWebMessageAsJson(json);
+            }
+        }
+
+        private static Windows.UI.Color ParseColour(string hex)
+        {
+            if (hex.Length >= 7 && hex[0] == '#'
+                && byte.TryParse(hex.AsSpan(1, 2), System.Globalization.NumberStyles.HexNumber, null, out byte red)
+                && byte.TryParse(hex.AsSpan(3, 2), System.Globalization.NumberStyles.HexNumber, null, out byte green)
+                && byte.TryParse(hex.AsSpan(5, 2), System.Globalization.NumberStyles.HexNumber, null, out byte blue))
+            {
+                return Windows.UI.Color.FromArgb(0xFF, red, green, blue);
+            }
+
+            return Colors.Black;
+        }
     }
-
-    private static bool IsControlDown() =>
-        InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control)
-            .HasFlag(CoreVirtualKeyStates.Down);
 }

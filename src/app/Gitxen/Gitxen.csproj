@@ -105,6 +105,10 @@
     <Content Include="Assets\gitxen-32.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- The terminal pane's page: xterm.js and its wiring, served to a WebView2 from this folder. -->
+    <Content Include="Assets\Terminal\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <!-- The XAML compiler's outputs (the compiled .xbf files, and the .pri index that maps XAML URIs

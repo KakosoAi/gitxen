@@ -19,6 +19,7 @@ Gitxen's own. Git must be installed separately.
 | .NET runtime and libraries (Microsoft) | MIT |
 | Anthropic C# SDK (Anthropic), for the optional AI writing | MIT |
 | Microsoft.Data.Sqlite and SQLite, for the local search index | MIT / public domain |
+| xterm.js and its fit addon (The xterm.js authors), for the terminal pane | MIT |
 
 Each is redistributed under its own terms.
 

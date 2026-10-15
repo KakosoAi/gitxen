@@ -1,31 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+using System.Text;
 using Microsoft.UI.Dispatching;
 
 namespace Gitxen.Terminal;
 
 /// <summary>
-///  One running shell in the terminal pane: the process, its transcript, and its command history.
+///  One running shell in the terminal pane: the process and the raw VT stream it prints.
 /// </summary>
 /// <remarks>
-///  The PTY reports output on its reader thread; this is the layer that owns the locking and puts
-///  the result on the UI thread. Renders are coalesced — a build spraying output enqueues one UI
-///  update at a time, not one per pipe read.
+///  The PTY reports output on its reader thread; this is the layer that owns the locking and hands the
+///  stream to the UI thread. Output is coalesced — a build spraying output posts one batch at a time to
+///  the renderer, not one message per pipe read. Rendering itself is xterm.js's job.
 /// </remarks>
 public sealed class TerminalSession : ObservableObject, IDisposable
 {
     private readonly ConPtySession _pty;
-    private readonly TerminalOutputBuffer _buffer = new();
     private readonly DispatcherQueue _dispatcher;
-    private readonly Lock _bufferLock = new();
-    private int _renderQueued;
-    private string _text = "";
+    private readonly Lock _pendingLock = new();
+    private readonly StringBuilder _pending = new();
+    private int _flushQueued;
     private bool _isRunning = true;
-
-    /// <summary>Commands entered in this session, oldest first, for Up/Down in the input box.</summary>
-    public List<string> History { get; } = [];
-
-    /// <summary>Where Up/Down currently is in <see cref="History"/>; equal to Count when not browsing.</summary>
-    public int HistoryIndex { get; set; }
 
     public TerminalShell Shell { get; }
 
@@ -43,18 +37,13 @@ public sealed class TerminalSession : ObservableObject, IDisposable
         string folder = Path.GetFileName(Path.TrimEndingDirectorySeparator(workingDirectory));
         Title = folder.Length > 0 ? $"{shell.Name} — {folder}" : shell.Name;
 
-        _buffer.SetScreenRows(rows);
         _pty = new ConPtySession(shell.ExecutablePath, shell.Arguments, workingDirectory, columns, rows);
         _pty.OutputReceived += OnOutputReceived;
         _pty.Exited += OnExited;
     }
 
-    /// <summary>The transcript. Only ever assigned on the UI thread.</summary>
-    public string Text
-    {
-        get => _text;
-        private set => SetProperty(ref _text, value);
-    }
+    /// <summary>Raw VT output, in batches, on the UI thread.</summary>
+    public event Action<string>? Output;
 
     public bool IsRunning
     {
@@ -62,41 +51,13 @@ public sealed class TerminalSession : ObservableObject, IDisposable
         private set => SetProperty(ref _isRunning, value);
     }
 
-    /// <summary>Sends one command line, as Enter in a console would.</summary>
-    public void SendLine(string command)
-    {
-        _pty.Write(command + "\r");
-
-        if (command.Length > 0 && (History.Count == 0 || History[^1] != command))
-        {
-            History.Add(command);
-        }
-
-        HistoryIndex = History.Count;
-    }
-
-    /// <summary>Ctrl+C: interrupts whatever the shell is running without ending the session.</summary>
-    public void SendInterrupt() => _pty.Write("\x03");
-
-    public void Clear()
-    {
-        lock (_bufferLock)
-        {
-            _buffer.Clear();
-        }
-
-        ScheduleRender();
-    }
+    /// <summary>Keystrokes from the renderer, exactly as typed.</summary>
+    public void Write(string input) => _pty.Write(input);
 
     public void Resize(short columns, short rows)
     {
         if (IsRunning)
         {
-            lock (_bufferLock)
-            {
-                _buffer.SetScreenRows(rows);
-            }
-
             _pty.Resize(columns, rows);
         }
     }
@@ -105,47 +66,46 @@ public sealed class TerminalSession : ObservableObject, IDisposable
 
     private void OnOutputReceived(string chunk)
     {
-        lock (_bufferLock)
+        lock (_pendingLock)
         {
-            _buffer.Append(chunk);
+            _pending.Append(chunk);
         }
 
-        ScheduleRender();
+        ScheduleFlush();
     }
 
     private void OnExited(int exitCode)
     {
-        lock (_bufferLock)
-        {
-            _buffer.Append($"\r\n[{Shell.Name} exited with code {exitCode}]\r\n");
-        }
-
-        ScheduleRender();
+        OnOutputReceived($"\r\n\u001b[90m[{Shell.Name} exited with code {exitCode}]\u001b[0m\r\n");
         _dispatcher.TryEnqueue(() => IsRunning = false);
     }
 
     /// <summary>
-    ///  Puts one transcript refresh on the UI queue, unless one is already waiting — the flag is
-    ///  what stops a chatty build enqueueing thousands of updates.
+    ///  Puts one flush on the UI queue, unless one is already waiting — the flag is what stops a
+    ///  chatty build enqueueing thousands of posts.
     /// </summary>
-    private void ScheduleRender()
+    private void ScheduleFlush()
     {
-        if (Interlocked.CompareExchange(ref _renderQueued, 1, 0) != 0)
+        if (Interlocked.CompareExchange(ref _flushQueued, 1, 0) != 0)
         {
             return;
         }
 
         _dispatcher.TryEnqueue(() =>
         {
-            Interlocked.Exchange(ref _renderQueued, 0);
+            Interlocked.Exchange(ref _flushQueued, 0);
 
-            string text;
-            lock (_bufferLock)
+            string batch;
+            lock (_pendingLock)
             {
-                text = _buffer.GetText();
+                batch = _pending.ToString();
+                _pending.Clear();
             }
 
-            Text = text;
+            if (batch.Length > 0)
+            {
+                Output?.Invoke(batch);
+            }
         });
     }
 }

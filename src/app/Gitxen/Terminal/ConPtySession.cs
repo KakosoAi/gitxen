@@ -14,8 +14,8 @@ namespace Gitxen.Terminal;
 ///   ConPTY rather than plain stdio redirection because a shell behind redirected pipes knows it is
 ///   not interactive: PowerShell stops printing its prompt, bash drops its aliases, and anything that
 ///   asks "is this a terminal?" answers no. Behind a pseudoconsole the shell behaves exactly as it
-///   does in Windows Terminal, and the cost is that the output arrives as a VT stream —
-///   <see cref="TerminalOutputBuffer"/> is the piece that turns that back into lines.
+///   does in Windows Terminal. The output arrives as a VT stream, which is passed unchanged to the
+///   xterm.js surface in the terminal pane.
 ///  </para>
 ///  <para>
 ///   Raw P/Invoke rather than a terminal-control package: the WindowsAppSDK assembly resolution in

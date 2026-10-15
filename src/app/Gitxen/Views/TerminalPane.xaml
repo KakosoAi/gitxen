@@ -7,7 +7,7 @@
     HorizontalContentAlignment="Stretch"
     VerticalContentAlignment="Stretch">
 
-    <Grid RowDefinitions="Auto,*,Auto">
+    <Grid RowDefinitions="Auto,*">
 
         <!-- One left-aligned run, like every other toolbar here: content pinned to the right of a
              full-width bar does not paint in this app. -->
@@ -41,11 +41,9 @@
 
                 <AppBarSeparator />
 
-                <Button Click="Interrupt_Click" ToolTipService.ToolTip="Interrupt the running command (Ctrl+C)">
-                    <FontIcon Glyph="&#xE71A;" FontSize="{StaticResource IconSizeSmall}" />
-                </Button>
-                <Button Click="Clear_Click" ToolTipService.ToolTip="Clear the output">
-                    <FontIcon Glyph="&#xEA99;" FontSize="{StaticResource IconSizeSmall}" />
+                <Button Click="OpenInWindowsTerminal_Click"
+                        ToolTipService.ToolTip="Open this folder in Windows Terminal">
+                    <FontIcon Glyph="&#xE8A7;" FontSize="{StaticResource IconSizeSmall}" />
                 </Button>
                 <Button Click="CloseSession_Click" ToolTipService.ToolTip="End this session">
                     <FontIcon Glyph="&#xE74D;" FontSize="{StaticResource IconSizeSmall}" />
@@ -56,25 +54,11 @@
             </StackPanel>
         </Grid>
 
-        <ScrollViewer Grid.Row="1" x:Name="OutputScroller" Padding="12,0,12,4"
-                      HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Auto"
-                      SizeChanged="OutputScroller_SizeChanged">
-            <TextBlock x:Name="OutputText"
-                       FontFamily="Cascadia Mono, Consolas" FontSize="12"
-                       IsTextSelectionEnabled="True"
-                       TextWrapping="NoWrap" />
-        </ScrollViewer>
+        <!-- One surface per session, so switching keeps each one's screen, scrollback and any
+             full-screen program exactly as it was. -->
+        <Grid Grid.Row="1" x:Name="Surfaces" />
 
-        <!-- The star column is last, per the layout constraint this app lives with. -->
-        <Grid Grid.Row="2" Padding="12,4,12,8" ColumnSpacing="8" ColumnDefinitions="Auto,*">
-            <FontIcon Grid.Column="0" Glyph="&#xE76C;" FontSize="{StaticResource IconSizeSmall}"
-                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                      VerticalAlignment="Center" />
-            <TextBox Grid.Column="1" x:Name="InputBox"
-                     FontFamily="Cascadia Mono, Consolas" FontSize="12"
-                     PlaceholderText="Type a command — Enter runs it; Up and Down recall history"
-                     KeyDown="InputBox_KeyDown"
-                     AutomationProperties.Name="Terminal command" />
-        </Grid>
+        <TextBlock Grid.Row="1" x:Name="StatusText" Margin="12,8,12,8" TextWrapping="Wrap"
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" Visibility="Collapsed" />
     </Grid>
 </UserControl>

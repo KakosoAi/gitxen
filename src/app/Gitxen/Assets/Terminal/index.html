@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!--
+  The terminal pane's renderer: xterm.js (MIT, see LICENSE-xterm.txt) drawing what a ConPTY shell
+  prints, and sending back what is typed. Served from a virtual host mapped to this folder, so nothing
+  here is fetched from the network. The host talks to it only through chrome.webview messages:
+    in  {t:"init", font, fontSize, theme, cursor}   {t:"out", d}   {t:"paste", d}   {t:"focus"}
+    out {t:"ready"}   {t:"in", d}   {t:"size", cols, rows}   {t:"copy", d}   {t:"paste"}   {t:"hide"}
+-->
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <link rel="stylesheet" href="xterm.css" />
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; }
+    #terminal { position: absolute; inset: 4px 0 0 10px; }
+    .xterm-viewport::-webkit-scrollbar { width: 10px; }
+    .xterm-viewport::-webkit-scrollbar-thumb { background: rgba(128, 128, 128, 0.4); border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <div id="terminal"></div>
+  <script src="xterm.js"></script>
+  <script src="addon-fit.js"></script>
+  <script src="terminal.js"></script>
+</body>
+</html>

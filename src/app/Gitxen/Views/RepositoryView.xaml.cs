@@ -159,7 +159,7 @@ public sealed partial class RepositoryView : UserControl
         if (show)
         {
             Terminal.EnsureSession();
-            Terminal.FocusInput();
+            Terminal.FocusTerminal();
         }
     }
 
