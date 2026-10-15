@@ -1,0 +1,530 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<views:RepositoryPage
+    x:Class="Gitxen.Views.HistoryView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Gitxen"
+    xmlns:controls="using:Gitxen.Controls"
+    xmlns:conv="using:Gitxen.Converters"
+    xmlns:graph="using:Gitxen.Graph"
+    xmlns:models="using:Gitxen.Models"
+    xmlns:views="using:Gitxen.Views"
+    xmlns:vm="using:Gitxen.ViewModels">
+
+    <UserControl.Resources>
+        <!-- Rounded rows; no vertical margin, or the lane lines would break between them. -->
+        <Style x:Key="CommitRowItemStyle" TargetType="ListViewItem" BasedOn="{StaticResource DiffLineItemStyle}">
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Esc closes the file viewer; when it is closed the key is left alone for Zen and the rest. -->
+        <Grid.KeyboardAccelerators>
+            <KeyboardAccelerator Key="Escape" Invoked="Escape_Invoked" />
+        </Grid.KeyboardAccelerators>
+
+
+        <!-- Scope, filter and search, in one left-aligned run: see DiffPanel for why nothing is
+             pinned to the far right of a full-width bar. -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12" Padding="16,12,16,10"
+                    HorizontalAlignment="Left"
+                    Visibility="{x:Bind Tab.ChromeVisibility, Mode=OneWay}">
+
+            <!-- Which refs git walks. The default is the current branch; All branches is what makes
+                 the lanes show anything other than a straight line. -->
+            <SelectorBar x:Name="ScopeBar" SelectionChanged="ScopeBar_SelectionChanged"
+                         VerticalAlignment="Center">
+                <SelectorBarItem x:Name="CurrentBranchScope" Text="Current branch" IsSelected="True" />
+                <SelectorBarItem x:Name="AllBranchesScope" Text="All branches" />
+            </SelectorBar>
+
+            <AutoSuggestBox Width="260" PlaceholderText="Filter loaded commits"
+                            QueryIcon="Find" VerticalAlignment="Center"
+                            Text="{x:Bind Tab.Filter, Mode=TwoWay}" />
+
+            <!-- Distinct from the box above: this one re-runs git log, so it can find commits that
+                 were never loaded. -->
+            <Button Click="Search_Click" VerticalAlignment="Center"
+                    ToolTipService.ToolTip="Search the whole history with git: messages, authors, code">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon Glyph="&#xE721;" FontSize="{StaticResource IconSizeSmall}" />
+                    <TextBlock Text="Search history" />
+                </StackPanel>
+            </Button>
+
+            <!-- The people behind the loaded commits, most active first. One click shows only theirs;
+                 built in code, since which authors there are is only known once history has loaded. -->
+            <StackPanel x:Name="AuthorChips" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" />
+            <Button Content="Clear search" Click="ClearSearch_Click" VerticalAlignment="Center"
+                    Visibility="{x:Bind Tab.QueryVisibility, Mode=OneWay}" />
+
+            <!-- Only present while a comparison is active, so there is always a way back out of it. -->
+            <Button Click="StopComparing_Click" VerticalAlignment="Center"
+                    Visibility="{x:Bind Tab.CompareVisibility, Mode=OneWay}">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon Glyph="&#xE711;" FontSize="{StaticResource IconSizeSmall}" />
+                    <TextBlock Text="{x:Bind Tab.CompareDescription, Mode=OneWay}" />
+                </StackPanel>
+            </Button>
+
+            <ProgressRing Width="16" Height="16" VerticalAlignment="Center"
+                          IsActive="{x:Bind Tab.IsLoading, Mode=OneWay}" />
+            <TextBlock Text="{x:Bind Tab.Status, Mode=OneWay}" Style="{StaticResource SecondaryTextStyle}" />
+            <TextBlock Text="{x:Bind Tab.QueryDescription, Mode=OneWay}"
+                       Style="{StaticResource SecondaryTextStyle}" FontStyle="Italic"
+                       Visibility="{x:Bind Tab.QueryVisibility, Mode=OneWay}" />
+        </StackPanel>
+
+        <!-- Commit list, then the details pane. -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto">
+
+            <Grid RowDefinitions="*" Margin="16,0,0,0">
+
+                <!-- No column labels: the rows identify themselves (lane, refs, subject, hash, author
+                     avatar, age), and a header row outside the ListView cannot be kept aligned with
+                     the virtualized rows inside it. -->
+                <ListView x:Name="CommitList"
+                          ItemsSource="{x:Bind Tab.Commits, Mode=OneWay}"
+                          SelectedItem="{x:Bind Tab.SelectedCommit, Mode=TwoWay}"
+                          SelectionMode="Single"
+                          ItemContainerStyle="{StaticResource CommitRowItemStyle}">
+                    <ListView.Footer>
+                        <Button Content="Load more commits" Margin="8,10,0,14"
+                                Click="LoadMore_Click"
+                                Visibility="{x:Bind Tab.LoadMoreVisibility, Mode=OneWay}" />
+                    </ListView.Footer>
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="local:CommitRowViewModel">
+                            <Grid Height="{x:Bind RowHeight}" ColumnSpacing="12" Padding="8,0,10,0"
+                                  RightTapped="CommitRow_RightTapped">
+                                <!--
+                                    Lane, avatar, then the text. The star column is deliberately last: a
+                                    column placed after a star-sized one is arranged off the right of the
+                                    screen here, so everything fixed leads and the text, which absorbs
+                                    the slack, ends the row. The first column is Auto, sized by the lane
+                                    control's own bound Width, because ColumnDefinition.Width is a
+                                    GridLength and cannot be bound to the graph builder's plain double.
+                                -->
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Grid.ContextFlyout>
+                                    <MenuFlyout>
+                                        <MenuFlyoutItem Text="Create branch here…" Click="CreateBranch_Click">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE710;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem Text="Create tag here…" Click="CreateTag_Click" />
+                                        <MenuFlyoutItem Text="Explain this commit (AI)" Click="ExplainCommit_Click"
+                                                        ToolTipService.ToolTip="Claude explains what it does and why (sends the commit to Anthropic)">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE945;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem Text="Check out this commit" Click="CheckoutCommit_Click" />
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutItem Text="Compare with the selected commit"
+                                                        Click="CompareWith_Click" />
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutItem Text="Cherry-pick" Click="CherryPick_Click" />
+                                        <MenuFlyoutItem Text="Revert" Click="Revert_Click" />
+                                        <MenuFlyoutItem Text="Rebase onto this…" Click="Rebase_Click" />
+                                        <MenuFlyoutItem Text="Edit the commits after this…" Click="EditCommits_Click"
+                                                        ToolTipService.ToolTip="Reorder, reword, squash or drop the commits made since this one (interactive rebase)" />
+                                        <MenuFlyoutSubItem Text="Reset current branch to here">
+                                            <MenuFlyoutItem Text="Soft — keep changes staged" Click="ResetSoft_Click" />
+                                            <MenuFlyoutItem Text="Mixed — keep changes unstaged" Click="ResetMixed_Click" />
+                                            <MenuFlyoutItem Text="Hard — discard changes" Click="ResetHard_Click" />
+                                        </MenuFlyoutSubItem>
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutSubItem Text="Bisect">
+                                            <MenuFlyoutItem Text="Start" Click="BisectStart_Click" />
+                                            <MenuFlyoutItem Text="Mark this commit good" Click="BisectGood_Click" />
+                                            <MenuFlyoutItem Text="Mark this commit bad" Click="BisectBad_Click" />
+                                            <MenuFlyoutItem Text="Reset" Click="BisectReset_Click" />
+                                        </MenuFlyoutSubItem>
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutItem Text="Open this commit in the browser"
+                                                        Click="OpenCommitOnHost_Click" />
+                                        <MenuFlyoutSeparator />
+                                        <MenuFlyoutItem Text="Copy full hash" Click="CopyHash_Click">
+                                            <MenuFlyoutItem.Icon>
+                                                <FontIcon Glyph="&#xE8C8;" />
+                                            </MenuFlyoutItem.Icon>
+                                        </MenuFlyoutItem>
+                                        <MenuFlyoutItem Text="Copy subject" Click="CopySubject_Click" />
+                                    </MenuFlyout>
+                                </Grid.ContextFlyout>
+
+                                <!-- Lane drawing: one Path per colour, in a Canvas whose coordinate
+                                     space matches RowHeight. -->
+                                <ItemsControl ItemsSource="{x:Bind GraphSegments, Mode=OneWay}"
+                                              Width="{x:Bind GraphColumnWidth, Mode=OneWay}"
+                                              VerticalAlignment="Stretch">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <Canvas />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="graph:GraphSegment">
+                                            <Path Data="{x:Bind Geometry}" Stroke="{x:Bind Stroke}"
+                                                  Fill="{x:Bind Fill}" StrokeThickness="{x:Bind Thickness}"
+                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- The author as a coloured disc, the same colour wherever they appear;
+                                     the working-directory row has a pending glyph instead. -->
+                                <Grid Grid.Column="1" Width="{x:Bind AvatarSize}" Height="{x:Bind AvatarSize}"
+                                      VerticalAlignment="Center">
+                                    <Ellipse Fill="{x:Bind AvatarBrush}" Visibility="{x:Bind AvatarVisibility}" />
+                                    <TextBlock Text="{x:Bind AuthorInitials}" FontSize="{x:Bind AvatarFontSize}"
+                                               FontWeight="SemiBold" Foreground="{x:Bind AvatarInitialsBrush}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Visibility="{x:Bind AvatarVisibility}" />
+                                    <FontIcon Glyph="&#xE895;" FontSize="{StaticResource IconSizeSmall}"
+                                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                              Visibility="{x:Bind PendingGlyphVisibility}" />
+                                </Grid>
+
+                                <!--
+                                    Line one: ref chips, the subject, then what GitHub Actions made of the
+                                    commit. Line two (Comfortable density): who and when, and the hash.
+                                    Left-aligned with the subject as its star column: the grid is only as
+                                    wide as what it holds, so the mark sits right after a short subject,
+                                    and a long one is ellipsised against the mark instead of pushing it
+                                    out of sight.
+                                -->
+                                <Grid Grid.Column="2" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                      RowSpacing="2" Opacity="{x:Bind SubjectOpacity}">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <Grid HorizontalAlignment="Left">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Glyph="&#xE8AB;" FontSize="{StaticResource IconSizeSmall}" Margin="0,0,8,0"
+                                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                  Visibility="{x:Bind MergeGlyphVisibility}" />
+                                        <ItemsControl Grid.Column="1" ItemsSource="{x:Bind Refs}" Margin="0,0,6,0"
+                                                  Visibility="{x:Bind RefsVisibility}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" Spacing="4" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="models:RefBadge">
+                                                <Border Style="{StaticResource RefBadgeStyle}"
+                                                        Background="{x:Bind Background}">
+                                                    <TextBlock Text="{x:Bind Label}" FontSize="{StaticResource FontSizeCaption}"
+                                                               Foreground="{x:Bind Foreground}" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                        <TextBlock Grid.Column="2" Text="{x:Bind Subject}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="3" Text="{x:Bind MetaLine}" Margin="12,0,0,0"
+                                                   Style="{StaticResource SecondaryTextStyle}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   Visibility="{x:Bind CompactMetaVisibility}" />
+
+                                        <!--
+                                        A glyph in the state's colour, the details in its tooltip, and a
+                                        click that opens the run (or, for several, the commit's checks) in
+                                        the browser. Nothing for a repository that is not on GitHub or a
+                                        commit no run was started for: no mark means unknown, never passed.
+                                    -->
+                                        <Button Grid.Column="4" Style="{StaticResource IconButtonStyle}" Margin="8,0,0,0"
+                                            Padding="0" MinWidth="0" MinHeight="0" Width="20" Height="20"
+                                            VerticalAlignment="Center" Click="CommitChecks_Click"
+                                            Visibility="{x:Bind ChecksVisibility, Mode=OneWay}"
+                                            ToolTipService.ToolTip="{x:Bind ChecksTooltip, Mode=OneWay}"
+                                            AutomationProperties.Name="{x:Bind ChecksSummary, Mode=OneWay}">
+                                        <FontIcon Glyph="{x:Bind ChecksGlyph, Mode=OneWay}"
+                                                  Foreground="{x:Bind ChecksBrush, Mode=OneWay}"
+                                                  FontSize="{StaticResource IconSizeSmall}" />
+                                    </Button>
+                                    </Grid>
+
+                                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8"
+                                                Visibility="{x:Bind MetaVisibility}">
+                                        <TextBlock Text="{x:Bind MetaLine}" Style="{StaticResource SecondaryTextStyle}"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   ToolTipService.ToolTip="{x:Bind Date}" />
+                                        <Border CornerRadius="4" Padding="5,0,5,1" VerticalAlignment="Center"
+                                                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                Visibility="{x:Bind HashChipVisibility}">
+                                            <TextBlock Text="{x:Bind ShortHash}" Style="{StaticResource HashTextStyle}"
+                                                       FontSize="{StaticResource FontSizeCaption}" />
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+
+                <StackPanel Spacing="10" VerticalAlignment="Center"
+                            Visibility="{x:Bind conv:Show.IfSettledEmpty(Tab.Commits.Count, Tab.IsLoading), Mode=OneWay}">
+                    <FontIcon Glyph="&#xE81C;" Style="{StaticResource EmptyStateGlyphStyle}" />
+                    <TextBlock Text="No commits yet" Style="{StaticResource EmptyStateTitleStyle}" />
+                    <TextBlock Style="{StaticResource EmptyStateBodyStyle}"
+                               Text="Nothing has been committed on this branch. Stage a change on the Changes page to make the first commit." />
+                </StackPanel>
+
+                <!--
+                    The file viewer: the selected file's diff, with Blame and File history toggled open
+                    beside it. It slides in over the right of the commit list when a changed file is
+                    clicked and goes again with Esc or its close button, so the history fills the page
+                    the rest of the time. Its left edge drags to resize.
+                -->
+                <Grid x:Name="FileViewer" HorizontalAlignment="Right" VerticalAlignment="Stretch"
+                      Margin="0,0,8,12" ColumnDefinitions="Auto,*"
+                      Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"
+                      BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                      CornerRadius="8"
+                      Visibility="{x:Bind Tab.FileViewerVisibility, Mode=OneWay}">
+                    <controls:PaneSplitter Orientation="Vertical" Invert="True"
+                                           Minimum="480" Maximum="3000" Target="{x:Bind FileViewer}" />
+                    <Grid Grid.Column="1">
+                <Grid ColumnDefinitions="*,Auto,Auto">
+                    <views:DiffPanel Diff="{x:Bind Tab.HistoryDiff, Mode=OneWay}">
+                        <views:DiffPanel.ActionsContent>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <ToggleButton IsChecked="{x:Bind Tab.IsBlameOpen, Mode=TwoWay}"
+                                              ToolTipService.ToolTip="Who last changed each line of the file, as of this commit">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE77B;" FontSize="{StaticResource IconSizeSmall}" />
+                                        <TextBlock Text="Blame" />
+                                    </StackPanel>
+                                </ToggleButton>
+                                <ToggleButton IsChecked="{x:Bind Tab.IsFileHistoryOpen, Mode=TwoWay}"
+                                              ToolTipService.ToolTip="The commits that changed the file">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE81C;" FontSize="{StaticResource IconSizeSmall}" />
+                                        <TextBlock Text="File history" />
+                                    </StackPanel>
+                                </ToggleButton>
+                                <Button Click="CloseViewer_Click" Style="{StaticResource IconButtonStyle}"
+                                        AutomationProperties.Name="Close the file viewer"
+                                        ToolTipService.ToolTip="Close (Esc)">
+                                    <FontIcon Glyph="&#xE711;" FontSize="{StaticResource IconSizeSmall}" />
+                                </Button>
+                            </StackPanel>
+                        </views:DiffPanel.ActionsContent>
+                    </views:DiffPanel>
+
+                    <controls:PaneSplitter Grid.Column="1" Orientation="Vertical" Invert="True"
+                                           Minimum="280" Maximum="1600" Target="{x:Bind SidePane}"
+                                           Visibility="{x:Bind Tab.SidePaneVisibility, Mode=OneWay}" />
+
+                    <!-- Both open: Blame above, File history below, half each. -->
+                    <Grid Grid.Column="2" x:Name="SidePane" Width="560"
+                          BorderThickness="1,0,0,0"
+                          BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                          Visibility="{x:Bind Tab.SidePaneVisibility, Mode=OneWay}">
+                        <Grid.RowDefinitions>
+                            <RowDefinition x:Name="BlameRow" Height="*" />
+                            <RowDefinition x:Name="FileHistoryRow" Height="*" />
+                        </Grid.RowDefinitions>
+                        <views:BlamePanel Model="{x:Bind Tab.Blame, Mode=OneWay}"
+                                          Visibility="{x:Bind Tab.BlameVisibility, Mode=OneWay}" />
+                        <Border Grid.Row="1" BorderThickness="0,1,0,0"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                Visibility="{x:Bind Tab.FileHistoryVisibility, Mode=OneWay}">
+                            <views:FileHistoryPanel Model="{x:Bind Tab.FileHistory, Mode=OneWay}" />
+                        </Border>
+                    </Grid>
+                </Grid>
+                    </Grid>
+                </Grid>
+            </Grid>
+
+            <controls:PaneSplitter Grid.Column="1" Orientation="Vertical" Invert="True"
+                                   Minimum="260" Maximum="900" Target="{x:Bind DetailsPane}"
+                                   Visibility="{x:Bind Tab.DetailsVisibility, Mode=OneWay}" />
+
+            <!-- Commit details and the files it touched. -->
+            <Grid Grid.Column="2" x:Name="DetailsPane" Width="380" RowDefinitions="Auto,Auto,*"
+                  Margin="0,0,16,0"
+                  Visibility="{x:Bind Tab.DetailsVisibility, Mode=OneWay}">
+
+                <Border Style="{StaticResource CardBorderStyle}" Padding="16,14,16,14">
+                    <ScrollViewer MaxHeight="260">
+                        <StackPanel Spacing="10"
+                                    Visibility="{x:Bind Tab.SelectedCommitVisibility, Mode=OneWay}">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                <Grid Width="38" Height="38" VerticalAlignment="Center"
+                                      ToolTipService.ToolTip="{x:Bind Tab.SelectedCommit.AuthorEmail, Mode=OneWay}">
+                                    <Ellipse Fill="{x:Bind Tab.SelectedCommit.AvatarBrush, Mode=OneWay}"
+                                             Visibility="{x:Bind Tab.SelectedCommit.AvatarVisibility, Mode=OneWay}" />
+                                    <TextBlock Text="{x:Bind Tab.SelectedCommit.AuthorInitials, Mode=OneWay}"
+                                               FontSize="14" FontWeight="SemiBold" Foreground="White"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               Visibility="{x:Bind Tab.SelectedCommit.AvatarVisibility, Mode=OneWay}" />
+                                </Grid>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{x:Bind Tab.SelectedCommit.Author, Mode=OneWay}" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{x:Bind Tab.SelectedCommit.Date, Mode=OneWay}"
+                                               Style="{StaticResource PageSubtitleStyle}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock Text="{x:Bind Tab.SelectedCommit.Subject, Mode=OneWay}"
+                                       FontSize="{StaticResource FontSizeSubtitle}" FontWeight="SemiBold"
+                                       TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+
+                            <ItemsControl ItemsSource="{x:Bind Tab.SelectedCommit.Refs, Mode=OneWay}"
+                                          Visibility="{x:Bind Tab.SelectedCommit.RefsVisibility, Mode=OneWay}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="4" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:RefBadge">
+                                        <Border Style="{StaticResource RefBadgeStyle}" Background="{x:Bind Background}">
+                                            <TextBlock Text="{x:Bind Label}" FontSize="{StaticResource FontSizeCaption}"
+                                                       Foreground="{x:Bind Foreground}" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                <Border CornerRadius="6" Padding="8,4,8,5" HorizontalAlignment="Left"
+                                        Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                                    <TextBlock Text="{x:Bind Tab.SelectedCommit.FullHash, Mode=OneWay}"
+                                               Style="{StaticResource HashTextStyle}" FontSize="{StaticResource FontSizeCaption}"
+                                               IsTextSelectionEnabled="True" TextWrapping="Wrap" />
+                                </Border>
+                                <Button Grid.Column="1" Style="{StaticResource IconButtonStyle}" Click="CopySelectedHash_Click"
+                                        AutomationProperties.Name="Copy the full hash" ToolTipService.ToolTip="Copy the full hash">
+                                    <FontIcon Glyph="&#xE8C8;" FontSize="{StaticResource IconSizeSmall}" />
+                                </Button>
+                            </Grid>
+
+                            <TextBlock Text="{x:Bind Tab.SelectedCommit.Body, Mode=OneWay}"
+                                       TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+
+                <!-- What GitHub Actions made of the commit, one line per workflow; each opens its run. -->
+                <Grid Grid.Row="1" RowDefinitions="Auto,Auto" Margin="0,12,0,0"
+                      Visibility="{x:Bind Tab.SelectedChecksVisibility, Mode=OneWay}">
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="2,0,0,6">
+                        <TextBlock Text="Checks" Style="{StaticResource SectionCaptionStyle}" />
+                        <TextBlock Text="{x:Bind Tab.SelectedCommit.ChecksSummary, Mode=OneWay}"
+                                   Style="{StaticResource SecondaryTextStyle}"
+                                   FontSize="{StaticResource FontSizeCaption}" />
+                    </StackPanel>
+                    <Border Grid.Row="1" Style="{StaticResource CardBorderStyle}" Padding="4">
+                        <ScrollViewer MaxHeight="150">
+                            <ItemsControl ItemsSource="{x:Bind Tab.SelectedCommit.ChecksRuns, Mode=OneWay}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:RunRow">
+                                        <Button Style="{StaticResource IconButtonStyle}" Click="CheckRun_Click"
+                                                Tag="{x:Bind Model.Url}" Padding="8,5,8,5"
+                                                HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                                ToolTipService.ToolTip="Open this run on GitHub">
+                                            <Grid ColumnDefinitions="22,*,Auto" ColumnSpacing="6">
+                                                <FontIcon Glyph="{x:Bind Glyph}" Foreground="{x:Bind Brush}"
+                                                          FontSize="{StaticResource IconSizeSmall}" />
+                                                <StackPanel Grid.Column="1">
+                                                    <TextBlock Text="{x:Bind Workflow}" TextTrimming="CharacterEllipsis"
+                                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                                                    <TextBlock Text="{x:Bind OutcomeText}"
+                                                               Style="{StaticResource SecondaryTextStyle}"
+                                                               FontSize="{StaticResource FontSizeCaption}" />
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" Text="{x:Bind DurationText}"
+                                                           Style="{StaticResource SecondaryTextStyle}"
+                                                           FontSize="{StaticResource FontSizeCaption}" />
+                                            </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+
+                <Grid Grid.Row="2" RowDefinitions="Auto,Auto,*" Margin="0,12,0,0">
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="2,0,0,6">
+                        <TextBlock Text="Changed files" Style="{StaticResource SectionCaptionStyle}" />
+                        <TextBlock x:Name="FileSummaryText" Style="{StaticResource SecondaryTextStyle}"
+                                   FontSize="{StaticResource FontSizeCaption}" />
+                    </StackPanel>
+
+                    <!-- What kind of change it was, in proportion: added, modified, deleted, renamed. -->
+                    <Grid x:Name="FileSummaryBar" Grid.Row="1" Height="6" Margin="2,0,2,8" ColumnSpacing="2"
+                          CornerRadius="3" />
+
+                    <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}">
+                        <ListView ItemsSource="{x:Bind Tab.ChangedFiles, Mode=OneWay}"
+                                  SelectedItem="{x:Bind Tab.SelectedChangedFile, Mode=TwoWay}"
+                                  IsItemClickEnabled="True" ItemClick="ChangedFile_ItemClick"
+                                  SelectionMode="Single" Padding="4"
+                                  ItemContainerStyle="{StaticResource DenseListViewItemStyle}">
+                            <!-- Rows animate in as the listing refreshes; supported inline only,
+                                 a Transitions-typed style setter fails XAML parsing at runtime. -->
+                            <ListView.ItemContainerTransitions>
+                                <TransitionCollection>
+                                    <AddDeleteThemeTransition />
+                                    <ReorderThemeTransition />
+                                </TransitionCollection>
+                            </ListView.ItemContainerTransitions>
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="local:ChangedFileViewModel">
+                                    <Grid ColumnDefinitions="20,*" ColumnSpacing="10">
+                                        <!-- The change as a small solid tile, in the colour of its kind. -->
+                                        <Border Width="20" Height="20" CornerRadius="5" VerticalAlignment="Center"
+                                                Background="{x:Bind ChangeBrush}" ToolTipService.ToolTip="{x:Bind Kind}">
+                                            <TextBlock Text="{x:Bind Change}" Style="{StaticResource CodeTextStyle}"
+                                                       Foreground="White" FontWeight="SemiBold" FontSize="11"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1">
+                                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                                <Ellipse Width="7" Height="7" VerticalAlignment="Center"
+                                                         Fill="{x:Bind conv:FileTypes.DotFor(Name)}" />
+                                                <TextBlock Text="{x:Bind FileName}" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                            <TextBlock Text="{x:Bind Detail}" FontSize="{StaticResource FontSizeCaption}"
+                                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       Visibility="{x:Bind DetailVisibility}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Grid>
+
+    </Grid>
+</views:RepositoryPage>

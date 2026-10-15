@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <!-- Application -->
+    <PackageVersion Include="Microsoft.Windows.CsWinRT" Version="2.2.0" />
+    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="2.4.0" />
+    <!-- The official Anthropic SDK (MIT), for the opt-in AI writing of commit messages and pull requests. -->
+    <PackageVersion Include="Anthropic" Version="12.53.0" />
+    <!-- The local search index (SQLite; Microsoft.Data.Sqlite is MIT, SQLite itself is public domain). -->
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+
+    <!-- Every project: see Directory.Build.targets -->
+    <PackageVersion Include="JetBrains.Annotations" Version="2021.2.0" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
+    <PackageVersion Include="Microsoft.VisualStudio.Threading" Version="17.13.61" />
+    <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="3.3.4" PrivateAssets="all" />
+
+    <!-- Test infra: referenced by eng/Tests.targets when tests return -->
+    <PackageVersion Include="AwesomeAssertions" Version="9.4.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+    <PackageVersion Include="NSubstitute" Version="5.3.0" />
+    <PackageVersion Include="NUnit.Analyzers" Version="4.7.0" PrivateAssets="all" />
+    <PackageVersion Include="NUnit.ConsoleRunner" Version="3.19.2" />
+    <PackageVersion Include="NUnit" Version="4.3.2" />
+    <PackageVersion Include="NUnit3TestAdapter" Version="5.0.0" />
+    <PackageVersion Include="Verify.NUnit" Version="28.16.0" />
+  </ItemGroup>
+</Project>

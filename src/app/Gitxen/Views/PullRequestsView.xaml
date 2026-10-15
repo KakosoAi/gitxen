@@ -1,0 +1,378 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<views:RepositoryPage
+    x:Class="Gitxen.Views.PullRequestsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Gitxen.Controls"
+    xmlns:conv="using:Gitxen.Converters"
+    xmlns:vm="using:Gitxen.ViewModels"
+    xmlns:views="using:Gitxen.Views">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Title, the things you do to the list, and how to narrow it. -->
+        <StackPanel Grid.Row="0" Padding="20,16,20,10" Spacing="10"
+                    Visibility="{x:Bind Tab.GitHub.ContentVisibility, Mode=OneWay}">
+            <StackPanel Orientation="Horizontal" Spacing="24" HorizontalAlignment="Left">
+                <StackPanel Spacing="2">
+                    <TextBlock Text="Pull requests" Style="{StaticResource PageTitleStyle}" />
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="{x:Bind Tab.GitHub.RepositoryName, Mode=OneWay}"
+                                   Style="{StaticResource PageSubtitleStyle}" VerticalAlignment="Center" />
+                        <views:GitHubAccountButton Model="{x:Bind Tab.GitHub, Mode=OneWay}"
+                                                   AccountChanged="Account_Changed" />
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Button Click="NewPullRequest_Click" Style="{ThemeResource AccentButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE710;" FontSize="{StaticResource IconSizeSmall}" />
+                            <TextBlock Text="New pull request" />
+                        </StackPanel>
+                    </Button>
+                    <Button Click="Refresh_Click" AutomationProperties.Name="Refresh" ToolTipService.ToolTip="Refresh">
+                        <FontIcon Glyph="&#xE72C;" FontSize="{StaticResource IconSizeMedium}" />
+                    </Button>
+                    <Button Click="OpenList_Click" AutomationProperties.Name="Open on GitHub"
+                            ToolTipService.ToolTip="Open the list on GitHub">
+                        <FontIcon Glyph="&#xE774;" FontSize="{StaticResource IconSizeMedium}" />
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Left">
+                <ComboBox MinWidth="120" VerticalAlignment="Center" AutomationProperties.Name="Show"
+                          SelectedIndex="{x:Bind Tab.GitHub.PullRequests.StateIndex, Mode=TwoWay}">
+                    <ComboBoxItem Content="Open" />
+                    <ComboBoxItem Content="Closed" />
+                    <ComboBoxItem Content="Merged" />
+                    <ComboBoxItem Content="All" />
+                </ComboBox>
+                <ToggleButton Content="Mine" VerticalAlignment="Center"
+                              ToolTipService.ToolTip="Only pull requests you opened"
+                              IsChecked="{x:Bind Tab.GitHub.PullRequests.MineOnly, Mode=TwoWay}" />
+                <TextBox Width="260" PlaceholderText="Filter by title, number, author or branch"
+                         VerticalAlignment="Center"
+                         Text="{x:Bind Tab.GitHub.PullRequests.Search, Mode=TwoWay}" />
+                <ProgressRing Width="16" Height="16" VerticalAlignment="Center"
+                              IsActive="{x:Bind Tab.GitHub.PullRequests.IsLoading, Mode=OneWay}" />
+                <TextBlock Text="{x:Bind Tab.GitHub.PullRequests.CountText, Mode=OneWay}"
+                           Style="{StaticResource SecondaryTextStyle}" VerticalAlignment="Center" />
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Shown instead of everything else when gh cannot be used. -->
+        <views:GitHubGateView Grid.RowSpan="2" GitHub="{x:Bind Tab.GitHub, Mode=OneWay}"
+                              Rechecked="Gate_Rechecked" />
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,16"
+              Visibility="{x:Bind Tab.GitHub.ContentVisibility, Mode=OneWay}">
+
+            <!-- The list. -->
+            <Grid Margin="20,0,0,0">
+                <Border Style="{StaticResource CardBorderStyle}">
+                    <ListView ItemsSource="{x:Bind Tab.GitHub.PullRequests.Items, Mode=OneWay}"
+                              SelectedItem="{x:Bind Tab.GitHub.PullRequests.Selected, Mode=TwoWay}"
+                              SelectionMode="Single" Padding="4"
+                              ItemContainerStyle="{StaticResource DenseListViewItemStyle}">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PullRequestRow">
+                                <Grid ColumnDefinitions="72,*,Auto" ColumnSpacing="12" Padding="2,4">
+                                    <!-- The state as a coloured word: a colour alone cannot be told
+                                         apart by everyone, and the word costs one line. -->
+                                    <Border VerticalAlignment="Top" CornerRadius="10" Padding="0,2"
+                                            Background="{x:Bind StateBrush}">
+                                        <TextBlock Text="{x:Bind StateText}" HorizontalAlignment="Center"
+                                                   FontSize="{StaticResource FontSizeCaption}" Foreground="White" />
+                                    </Border>
+
+                                    <StackPanel Grid.Column="1" Spacing="2">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                            <TextBlock Text="{x:Bind NumberText}" Style="{StaticResource HashTextStyle}"
+                                                       VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{x:Bind Title}" FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <FontIcon Grid.Column="2" Glyph="&#xE7BA;"
+                                                      FontSize="{StaticResource IconSizeSmall}"
+                                                      Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                                                      ToolTipService.ToolTip="Has merge conflicts"
+                                                      Visibility="{x:Bind ConflictVisibility}" />
+                                        </Grid>
+                                        <TextBlock FontSize="{StaticResource FontSizeCaption}"
+                                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   ToolTipService.ToolTip="{x:Bind UpdatedTooltip}">
+                                            <Run Text="{x:Bind Meta}" /><Run Text=" · " /><Run Text="{x:Bind Branches}" />
+                                        </TextBlock>
+                                        <views:LabelStrip Labels="{x:Bind Labels}" Visibility="{x:Bind LabelsVisibility}" />
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2" Spacing="3" HorizontalAlignment="Right">
+                                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                                            <TextBlock Text="{x:Bind ReviewText}" Visibility="{x:Bind ReviewVisibility}"
+                                                       FontSize="{StaticResource FontSizeCaption}"
+                                                       Foreground="{x:Bind ReviewBrush}" VerticalAlignment="Center" />
+                                            <FontIcon Glyph="{x:Bind ChecksGlyph, Mode=OneWay}"
+                                                      FontSize="{StaticResource IconSizeSmall}"
+                                                      Foreground="{x:Bind ChecksBrush, Mode=OneWay}"
+                                                      ToolTipService.ToolTip="{x:Bind ChecksTooltip, Mode=OneWay}"
+                                                      Visibility="{x:Bind ChecksVisibility, Mode=OneWay}" />
+                                        </StackPanel>
+                                        <TextBlock Text="{x:Bind ChangeSummary}" HorizontalAlignment="Right"
+                                                   FontSize="{StaticResource FontSizeCaption}"
+                                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Border>
+
+                <StackPanel Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Center"
+                            Visibility="{x:Bind Tab.GitHub.PullRequests.EmptyVisibility, Mode=OneWay}">
+                    <FontIcon Glyph="&#xE8AB;" Style="{StaticResource EmptyStateGlyphStyle}" />
+                    <TextBlock Text="{x:Bind Tab.GitHub.PullRequests.EmptyText, Mode=OneWay}"
+                               Style="{StaticResource EmptyStateBodyStyle}" TextWrapping="Wrap" MaxWidth="420" />
+                </StackPanel>
+            </Grid>
+
+            <controls:PaneSplitter Grid.Column="1" Orientation="Vertical" Invert="True"
+                                   Minimum="380" Maximum="1100" Target="{x:Bind DetailPane}"
+                                   Visibility="{x:Bind Tab.GitHub.PullRequests.SelectionVisibility, Mode=OneWay}" />
+
+            <!-- The selected pull request. -->
+            <Grid Grid.Column="2" x:Name="DetailPane" Width="640" RowDefinitions="Auto,Auto,*" Margin="0,0,16,0"
+                  Visibility="{x:Bind Tab.GitHub.PullRequests.SelectionVisibility, Mode=OneWay}">
+
+                <ProgressBar Grid.Row="0" IsIndeterminate="True" VerticalAlignment="Top"
+                             Visibility="{x:Bind conv:Show.If(Tab.GitHub.PullRequests.IsDetailLoading), Mode=OneWay}" />
+
+                <Border Grid.Row="0" Style="{StaticResource CardBorderStyle}" Padding="16,12,16,4"
+                        Visibility="{x:Bind Tab.GitHub.PullRequests.DetailVisibility, Mode=OneWay}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{x:Bind Tab.GitHub.PullRequests.Detail.Header.Title, Mode=OneWay}"
+                                   FontSize="{StaticResource FontSizeSubtitle}" FontWeight="SemiBold"
+                                   TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Border VerticalAlignment="Center" CornerRadius="10" Padding="10,2"
+                                    Background="{x:Bind Tab.GitHub.PullRequests.Detail.Header.StateBrush, Mode=OneWay}">
+                                <TextBlock Text="{x:Bind Tab.GitHub.PullRequests.Detail.Header.StateText, Mode=OneWay}"
+                                           FontSize="{StaticResource FontSizeCaption}" Foreground="White" />
+                            </Border>
+                            <TextBlock Text="{x:Bind Tab.GitHub.PullRequests.Detail.Sentence, Mode=OneWay}"
+                                       VerticalAlignment="Center" TextWrapping="Wrap"
+                                       Style="{StaticResource SecondaryTextStyle}" />
+                        </StackPanel>
+                        <views:LabelStrip Labels="{x:Bind Tab.GitHub.PullRequests.Detail.Header.Labels, Mode=OneWay}" />
+
+                        <!-- More than fits collapses into the overflow menu rather than clipping. -->
+                        <CommandBar DefaultLabelPosition="Right" Background="Transparent" IsOpen="False"
+                                    HorizontalAlignment="Left">
+                            <AppBarButton Label="Check out" Click="Checkout_Click"
+                                          ToolTipService.ToolTip="Switch to this pull request's branch">
+                                <AppBarButton.Icon>
+                                    <FontIcon Glyph="&#xE8AB;" />
+                                </AppBarButton.Icon>
+                            </AppBarButton>
+                            <AppBarButton Label="Merge"
+                                          Visibility="{x:Bind conv:Show.If(Tab.GitHub.PullRequests.Detail.CanMerge), Mode=OneWay}">
+                                <AppBarButton.Icon>
+                                    <FontIcon Glyph="&#xE8FD;" />
+                                </AppBarButton.Icon>
+                                <AppBarButton.Flyout>
+                                    <MenuFlyout>
+                                        <MenuFlyoutItem Text="Merge commit…" Tag="0" Click="Merge_Click" />
+                                        <MenuFlyoutItem Text="Squash and merge…" Tag="1" Click="Merge_Click" />
+                                        <MenuFlyoutItem Text="Rebase and merge…" Tag="2" Click="Merge_Click" />
+                                    </MenuFlyout>
+                                </AppBarButton.Flyout>
+                            </AppBarButton>
+                            <AppBarButton Label="Review…" Click="Review_Click"
+                                          Visibility="{x:Bind conv:Show.If(Tab.GitHub.PullRequests.Detail.CanReview), Mode=OneWay}">
+                                <AppBarButton.Icon>
+                                    <FontIcon Glyph="&#xE73E;" />
+                                </AppBarButton.Icon>
+                            </AppBarButton>
+                            <AppBarButton Label="Comment…" Click="Comment_Click">
+                                <AppBarButton.Icon>
+                                    <FontIcon Glyph="&#xE90A;" />
+                                </AppBarButton.Icon>
+                            </AppBarButton>
+                            <AppBarButton Label="Ready for review" Click="Ready_Click"
+                                          Visibility="{x:Bind conv:Show.If(Tab.GitHub.PullRequests.Detail.CanMarkReady), Mode=OneWay}">
+                                <AppBarButton.Icon>
+                                    <FontIcon Glyph="&#xE930;" />
+                                </AppBarButton.Icon>
+                            </AppBarButton>
+                            <AppBarButton Label="Close" Click="Close_Click"
+                                          Visibility="{x:Bind conv:Show.If(Tab.GitHub.PullRequests.Detail.CanClose), Mode=OneWay}">
+                                <AppBarButton.Icon>
+                                    <FontIcon Glyph="&#xE711;" />
+                                </AppBarButton.Icon>
+                            </AppBarButton>
+                            <AppBarButton Label="Reopen" Click="Reopen_Click"
+                                          Visibility="{x:Bind conv:Show.If(Tab.GitHub.PullRequests.Detail.CanReopen), Mode=OneWay}">
+                                <AppBarButton.Icon>
+                                    <FontIcon Glyph="&#xE777;" />
+                                </AppBarButton.Icon>
+                            </AppBarButton>
+                            <CommandBar.SecondaryCommands>
+                                <AppBarButton Label="Open on GitHub" Click="OpenOnGitHub_Click">
+                                    <AppBarButton.Icon>
+                                        <FontIcon Glyph="&#xE8A7;" />
+                                    </AppBarButton.Icon>
+                                </AppBarButton>
+                                <AppBarButton Label="Copy link" Click="CopyLink_Click">
+                                    <AppBarButton.Icon>
+                                        <FontIcon Glyph="&#xE8C8;" />
+                                    </AppBarButton.Icon>
+                                </AppBarButton>
+                            </CommandBar.SecondaryCommands>
+                        </CommandBar>
+                    </StackPanel>
+                </Border>
+
+                <SelectorBar Grid.Row="1" x:Name="Sections" Margin="0,8,0,4" SelectionChanged="Sections_SelectionChanged"
+                             Visibility="{x:Bind Tab.GitHub.PullRequests.DetailVisibility, Mode=OneWay}">
+                    <SelectorBarItem x:Name="ConversationItem" Text="Conversation" IsSelected="True" />
+                    <SelectorBarItem x:Name="FilesItem" Text="Files" />
+                    <SelectorBarItem x:Name="ChecksItem" Text="Checks" />
+                </SelectorBar>
+
+                <Grid Grid.Row="2" Visibility="{x:Bind Tab.GitHub.PullRequests.DetailVisibility, Mode=OneWay}">
+
+                    <!-- Conversation: the description, where the merge stands, reviews and comments. -->
+                    <ScrollViewer x:Name="ConversationPane">
+                        <StackPanel Spacing="12" Padding="0,4,12,16">
+                            <Border Style="{StaticResource CardBorderStyle}" Padding="14,12">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="{x:Bind Tab.GitHub.PullRequests.Detail.Body, Mode=OneWay}"
+                                               TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8"
+                                                Visibility="{x:Bind Tab.GitHub.PullRequests.Detail.MergeStatusVisibility, Mode=OneWay}">
+                                        <FontIcon Glyph="&#xE8FD;" FontSize="{StaticResource IconSizeSmall}"
+                                                  Foreground="{x:Bind Tab.GitHub.PullRequests.Detail.MergeStatusBrush, Mode=OneWay}" />
+                                        <TextBlock Text="{x:Bind Tab.GitHub.PullRequests.Detail.MergeStatus, Mode=OneWay}"
+                                                   Foreground="{x:Bind Tab.GitHub.PullRequests.Detail.MergeStatusBrush, Mode=OneWay}" />
+                                    </StackPanel>
+                                    <TextBlock Text="{x:Bind Tab.GitHub.PullRequests.Detail.Reviewers, Mode=OneWay}"
+                                               Style="{StaticResource SecondaryTextStyle}"
+                                               Visibility="{x:Bind Tab.GitHub.PullRequests.Detail.ReviewersVisibility, Mode=OneWay}" />
+                                </StackPanel>
+                            </Border>
+
+                            <ItemsControl ItemsSource="{x:Bind Tab.GitHub.PullRequests.Detail.Reviews, Mode=OneWay}"
+                                          Visibility="{x:Bind Tab.GitHub.PullRequests.Detail.ReviewsVisibility, Mode=OneWay}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Spacing="8" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ReviewRow">
+                                        <Border Style="{StaticResource CardBorderStyle}" Padding="14,10">
+                                            <StackPanel Spacing="6">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <TextBlock Text="{x:Bind Author}" FontWeight="SemiBold" />
+                                                    <TextBlock Text="{x:Bind Verdict}" Foreground="{x:Bind Brush}" />
+                                                    <TextBlock Text="{x:Bind When}" Style="{StaticResource SecondaryTextStyle}" />
+                                                </StackPanel>
+                                                <TextBlock Text="{x:Bind Body}" TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                                                           Visibility="{x:Bind BodyVisibility}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <ItemsControl ItemsSource="{x:Bind Tab.GitHub.PullRequests.Detail.Comments, Mode=OneWay}"
+                                          Visibility="{x:Bind Tab.GitHub.PullRequests.Detail.CommentsVisibility, Mode=OneWay}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Spacing="8" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:CommentRow">
+                                        <Border Style="{StaticResource CardBorderStyle}" Padding="14,10">
+                                            <StackPanel Spacing="6">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <TextBlock Text="{x:Bind Author}" FontWeight="SemiBold" />
+                                                    <TextBlock Text="{x:Bind When}" Style="{StaticResource SecondaryTextStyle}"
+                                                               ToolTipService.ToolTip="{x:Bind WhenTooltip}" />
+                                                </StackPanel>
+                                                <TextBlock Text="{x:Bind Body}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Files: the list, and the selected file's diff beneath it. -->
+                    <Grid x:Name="FilesPane" RowDefinitions="200,*" Visibility="Collapsed">
+                        <Border Style="{StaticResource CardBorderStyle}" Margin="0,4,12,8">
+                            <ListView x:Name="FileList" SelectionMode="Single" Padding="4"
+                                      ItemsSource="{x:Bind Tab.GitHub.PullRequests.Detail.Files, Mode=OneWay}"
+                                      SelectionChanged="File_SelectionChanged"
+                                      ItemContainerStyle="{StaticResource DenseListViewItemStyle}">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:FileRow">
+                                        <Grid ColumnDefinitions="22,*,Auto" ColumnSpacing="8" Padding="2,2">
+                                            <TextBlock Text="{x:Bind Marker}" FontWeight="SemiBold"
+                                                       Foreground="{x:Bind MarkerBrush}" HorizontalAlignment="Center" />
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="{x:Bind FileName}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{x:Bind Directory}" FontSize="{StaticResource FontSizeCaption}"
+                                                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2" Text="{x:Bind Change}" VerticalAlignment="Center"
+                                                       FontSize="{StaticResource FontSizeCaption}"
+                                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </Border>
+
+                        <Border Grid.Row="1" Margin="0,0,12,0" BorderThickness="0,1,0,0"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                            <views:DiffPanel Diff="{x:Bind Tab.GitHub.PullRequests.Diff, Mode=OneWay}" />
+                        </Border>
+                    </Grid>
+
+                    <!-- Checks: what ran, and how each came out. -->
+                    <ScrollViewer x:Name="ChecksPane" Visibility="Collapsed">
+                        <StackPanel Spacing="8" Padding="0,4,12,16">
+                            <TextBlock Text="{x:Bind Tab.GitHub.PullRequests.Detail.ChecksSummary, Mode=OneWay}"
+                                       FontWeight="SemiBold" />
+                            <Border Style="{StaticResource CardBorderStyle}" Padding="4"
+                                    Visibility="{x:Bind Tab.GitHub.PullRequests.Detail.ChecksVisibility, Mode=OneWay}">
+                                <ItemsControl ItemsSource="{x:Bind Tab.GitHub.PullRequests.Detail.Checks, Mode=OneWay}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:CheckRow">
+                                            <Grid ColumnDefinitions="24,*,Auto" ColumnSpacing="8" Padding="8,6">
+                                                <FontIcon Glyph="{x:Bind Glyph}" FontSize="{StaticResource IconSizeSmall}"
+                                                          Foreground="{x:Bind Brush}" VerticalAlignment="Center" />
+                                                <StackPanel Grid.Column="1">
+                                                    <TextBlock Text="{x:Bind Name}" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{x:Bind Workflow}" Visibility="{x:Bind WorkflowVisibility}"
+                                                               FontSize="{StaticResource FontSizeCaption}"
+                                                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                                </StackPanel>
+                                                <HyperlinkButton Grid.Column="2" Content="{x:Bind Result}" Padding="0"
+                                                                 NavigateUri="{x:Bind Link}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Grid>
+</views:RepositoryPage>

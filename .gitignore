@@ -1,0 +1,26 @@
+# Build output. Everything is written under artifacts/ by eng/Layout.props, so there is one folder
+# to ignore rather than a bin/ and obj/ beside every project.
+artifacts/
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+
+# Tooling
+.vs/
+.tools/
+.idea/
+*.received.*
+*.dotCover
+
+# Packaging output
+setup/gitxen/out/
+*.msi
+*.wixpdb
+*.wixobj
+*.nupkg
+
+# Local machine state
+*.log
+Thumbs.db
+desktop.ini

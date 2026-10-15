@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    gx: Gitxen's command line. A console companion to the window, not a git wrapper: it offers what
+    only Gitxen does (per-repository GitHub accounts as a git credential helper, repository templates,
+    the Overview's figures, git's speed-ups) and opens the window. It shares Gitxen.Core with the app
+    and is published into the same folder, so the installer puts it on PATH next to Gitxen.exe.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Gitxen.Cli</RootNamespace>
+    <AssemblyName>gx</AssemblyName>
+    <IsPublishable>true</IsPublishable>
+    <PublishDir Condition="'$(IsPublishable)' == 'true'">$(ArtifactsPublishDir)Gitxen\</PublishDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Gitxen.Core\Gitxen.Core.csproj" />
+    <ProjectReference Include="..\Gitxen.Git\Gitxen.Git.csproj" />
+    <ProjectReference Include="..\Gitxen.GitHub\Gitxen.GitHub.csproj" />
+  </ItemGroup>
+
+</Project>

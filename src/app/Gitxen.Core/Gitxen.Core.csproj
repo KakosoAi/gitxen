@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    What the window and the command line (gx) share: repository templates and creation, the Overview's
+    figures, git's speed-ups, GitHub accounts and credentials. No UI. It builds on Gitxen.Git and
+    Gitxen.GitHub. Its one package is Microsoft.Data.Sqlite, for the local search index.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Gitxen.Services</RootNamespace>
+    <AssemblyName>Gitxen.Core</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <ProjectReference Include="..\Gitxen.Git\Gitxen.Git.csproj" />
+    <ProjectReference Include="..\Gitxen.GitHub\Gitxen.GitHub.csproj" />
+  </ItemGroup>
+
+</Project>

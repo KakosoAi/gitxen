@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Gitxen MSI.
+
+  Built by build/Build-Gitxen.ps1 through the `wix` CLI rather than a .wixproj: an MSBuild project
+  here would inherit the repo's Directory.Build.props (TargetFramework, UseWindowsForms, central
+  package management), none of which a WiX project can make sense of.
+
+  Preprocessor variables supplied with `wix build -d`:
+    Version     three-part product version, e.g. 0.1.0
+    PayloadDir  the published application folder that becomes the install folder
+    IconFile    the .ico used for the shortcut and the Add/Remove Programs entry
+    LicenseRtf  the licence shown in the installer UI, generated from LICENSE
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <Package Name="Gitxen"
+           Manufacturer="Kakoso"
+           Version="$(var.Version)"
+           UpgradeCode="C6FA0B64-F38B-4112-A8CB-F2A7D0199B15"
+           Scope="perMachine"
+           Compressed="yes"
+           InstallerVersion="500"
+           Language="1033">
+
+    <!-- Same-or-older versions are blocked; newer ones replace the install in place, so upgrading
+         never leaves two entries in Add/Remove Programs. -->
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Gitxen is already installed. Uninstall it first to install this version." />
+
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="GitxenIcon.ico" SourceFile="$(var.IconFile)" />
+    <Property Id="ARPPRODUCTICON" Value="GitxenIcon.ico" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/KakosoAi/gitxen" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/KakosoAi/gitxen/issues" />
+    <!-- No ARPNOMODIFY: with the feature tree, Change in Add/Remove Programs is how the Explorer entry
+         is added or removed after installing. -->
+
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Gitxen" />
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder" />
+
+    <!-- Harvests the whole published payload (~500 files) rather than listing components by hand;
+         the file set changes with every runtime and Windows App SDK update. -->
+    <ComponentGroup Id="ApplicationFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(var.PayloadDir)\**" />
+    </ComponentGroup>
+
+    <Component Id="StartMenuShortcut" Directory="ProgramMenuFolder" Guid="A23C0D2F-B116-4C1D-BBCA-B3B4CD8EC86F">
+      <Shortcut Id="GitxenStartMenuShortcut"
+                Name="Gitxen"
+                Description="A git client for Windows"
+                Target="[INSTALLFOLDER]Gitxen.exe"
+                WorkingDirectory="INSTALLFOLDER"
+                Icon="GitxenIcon.ico" />
+      <RemoveFolder Id="RemoveStartMenuShortcut" On="uninstall" />
+      <!-- A shortcut cannot be its own key path, so the component is anchored to a registry value. -->
+      <RegistryValue Root="HKLM" Key="Software\Kakoso\Gitxen" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <!-- Puts `gitxen` on the command line. The install folder is added rather than the executable
+         copied, because gitxen.cmd resolves its target relative to its own location. -->
+    <Component Id="PathEntry" Directory="INSTALLFOLDER" Guid="3B3DB7B8-5C83-449A-A9AB-89D546CDAC2D">
+      <Environment Id="GitxenPath" Name="PATH" Value="[INSTALLFOLDER]" Action="set" Part="last" System="yes" Permanent="no" />
+      <RegistryValue Root="HKLM" Key="Software\Kakoso\Gitxen" Name="PathEntry" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <!--
+      Tells the app a fresh install has happened, so it shows the setup wizard once — even when the
+      person's settings survived an earlier uninstall, which they do, living in their own profile. Not
+      written on an upgrade (the old version's copy is removed with it), so upgrading never brings the
+      wizard back. The value is the product code, which is new for every build.
+    -->
+    <Component Id="FirstRunMarker" Directory="INSTALLFOLDER" Guid="961EACED-3C50-4FA9-82CA-5EFAD84DEE56" Condition="NOT WIX_UPGRADE_DETECTED">
+      <RegistryValue Root="HKLM" Key="Software\Kakoso\Gitxen" Name="FirstRunToken" Type="string" Value="[ProductCode]" KeyPath="yes" />
+    </Component>
+
+    <!--
+      "Open with Gitxen" on a folder, and on the empty space inside one, in File Explorer. On Windows 11
+      it sits under "Show more options": the top-level menu there only takes packaged, signed apps.
+      The app walks up from the folder to the repository it is in, and offers to create one if none.
+    -->
+    <Component Id="ExplorerContextMenu" Directory="INSTALLFOLDER" Guid="F08439CA-6D2F-4D2C-840D-9003867F6759">
+      <RegistryKey Root="HKLM" Key="Software\Classes\Directory\shell\Gitxen">
+        <RegistryValue Type="string" Value="Open with Gitxen" KeyPath="yes" />
+        <RegistryValue Name="Icon" Type="string" Value="&quot;[INSTALLFOLDER]Gitxen.exe&quot;,0" />
+        <RegistryKey Key="command">
+          <RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]Gitxen.exe&quot; &quot;%V&quot;" />
+        </RegistryKey>
+      </RegistryKey>
+      <RegistryKey Root="HKLM" Key="Software\Classes\Directory\Background\shell\Gitxen">
+        <RegistryValue Type="string" Value="Open with Gitxen" />
+        <RegistryValue Name="Icon" Type="string" Value="&quot;[INSTALLFOLDER]Gitxen.exe&quot;,0" />
+        <RegistryKey Key="command">
+          <RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]Gitxen.exe&quot; &quot;%V&quot;" />
+        </RegistryKey>
+      </RegistryKey>
+    </Component>
+
+    <!-- The application cannot be left out; the Explorer entry can, and is on unless unticked. -->
+    <Feature Id="Main" Title="Gitxen" Description="The application, its Start menu entry and the gitxen command."
+             Level="1" AllowAbsent="no" ConfigurableDirectory="INSTALLFOLDER" Display="expand">
+      <ComponentGroupRef Id="ApplicationFiles" />
+      <ComponentRef Id="StartMenuShortcut" />
+      <ComponentRef Id="PathEntry" />
+      <ComponentRef Id="FirstRunMarker" />
+
+      <Feature Id="ExplorerIntegration" Title="Open with Gitxen in Explorer"
+               Description="Adds &quot;Open with Gitxen&quot; when you right-click a folder, or inside one, in File Explorer."
+               Level="1">
+        <ComponentRef Id="ExplorerContextMenu" />
+      </Feature>
+    </Feature>
+
+    <!-- The feature tree rather than a plain folder picker, so the Explorer entry can be left out.
+         Its Browse button still moves the install folder. -->
+    <ui:WixUI Id="WixUI_FeatureTree" />
+
+  </Package>
+</Wix>

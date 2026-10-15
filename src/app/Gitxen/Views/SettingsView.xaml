@@ -1,0 +1,434 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<views:RepositoryPage
+    x:Class="Gitxen.Views.SettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:theming="using:Gitxen.Theming"
+    xmlns:views="using:Gitxen.Views">
+
+    <ScrollViewer>
+        <StackPanel Padding="20,16,20,24" Spacing="16" MaxWidth="760" HorizontalAlignment="Left">
+
+            <StackPanel Spacing="2">
+                <TextBlock Text="Settings" Style="{StaticResource PageTitleStyle}" />
+                <TextBlock Text="Applies to every open repository."
+                           Style="{StaticResource PageSubtitleStyle}" />
+            </StackPanel>
+
+            <!--
+                Appearance. A gallery rather than a dropdown: a theme name says almost nothing about
+                what it looks like, and that is the whole basis for the choice. Each swatch is drawn
+                in its own colours, so the row is a genuine side-by-side comparison.
+            -->
+            <Border Style="{StaticResource CardBorderStyle}" Padding="16">
+                <StackPanel Spacing="12">
+                    <StackPanel Orientation="Horizontal" Spacing="14">
+                        <FontIcon Glyph="&#xE771;" FontSize="{StaticResource IconSizeLarge}" VerticalAlignment="Center"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Theme" FontWeight="SemiBold" />
+                            <TextBlock Style="{StaticResource PageSubtitleStyle}"
+                                       Text="Takes effect as you select it, everywhere at once." />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <GridView x:Name="ThemeGallery" SelectionMode="Single" Padding="0"
+                              SelectionChanged="Theme_SelectionChanged">
+                        <GridView.ItemTemplate>
+                            <DataTemplate x:DataType="theming:ThemeOption">
+                                <!--
+                                    A miniature of the shell: title bar, a commit row on a card, then
+                                    the accent and the three status colours.
+                                -->
+                                <StackPanel Width="164" Spacing="7">
+                                    <Border Height="96" CornerRadius="6" BorderThickness="1"
+                                            Background="{x:Bind WindowBrush}"
+                                            BorderBrush="{x:Bind StrokeBrush}">
+                                        <StackPanel>
+                                            <Border Height="20" Padding="7,0,7,0"
+                                                    Background="{x:Bind SurfaceBrush}">
+                                                <StackPanel Orientation="Horizontal" Spacing="5"
+                                                            VerticalAlignment="Center">
+                                                    <Border Width="7" Height="7" CornerRadius="2"
+                                                            Background="{x:Bind AccentBrush}" />
+                                                    <Border Width="38" Height="4" CornerRadius="2"
+                                                            Background="{x:Bind TextMutedBrush}" />
+                                                </StackPanel>
+                                            </Border>
+
+                                            <StackPanel Padding="8,8,8,0" Spacing="7">
+                                                <Border CornerRadius="4" BorderThickness="1" Padding="6"
+                                                        Background="{x:Bind CardBrush}"
+                                                        BorderBrush="{x:Bind StrokeBrush}">
+                                                    <StackPanel Spacing="5">
+                                                        <Border Width="86" Height="4" CornerRadius="2"
+                                                                HorizontalAlignment="Left"
+                                                                Background="{x:Bind TextBrush}" />
+                                                        <Border Width="54" Height="4" CornerRadius="2"
+                                                                HorizontalAlignment="Left"
+                                                                Background="{x:Bind TextMutedBrush}" />
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                                    <Border Width="30" Height="10" CornerRadius="5"
+                                                            Background="{x:Bind AccentBrush}" />
+                                                    <Border Width="16" Height="10" CornerRadius="5"
+                                                            Background="{x:Bind SuccessBrush}" />
+                                                    <Border Width="16" Height="10" CornerRadius="5"
+                                                            Background="{x:Bind WarningBrush}" />
+                                                    <Border Width="16" Height="10" CornerRadius="5"
+                                                            Background="{x:Bind DangerBrush}" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <StackPanel>
+                                        <TextBlock Text="{x:Bind Name}" FontSize="{StaticResource FontSizeBody}"
+                                                   FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{x:Bind Detail}" FontSize="{StaticResource FontSizeCaption}"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </GridView.ItemTemplate>
+                    </GridView>
+                </StackPanel>
+            </Border>
+
+            <!-- Density -->
+            <Border Style="{StaticResource CardBorderStyle}" Padding="16">
+                <Grid ColumnDefinitions="Auto,440,180" ColumnSpacing="14">
+                    <FontIcon Glyph="&#xE8FD;" FontSize="{StaticResource IconSizeLarge}" VerticalAlignment="Center"
+                              Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="Density" FontWeight="SemiBold" />
+                        <TextBlock Style="{StaticResource PageSubtitleStyle}"
+                                   Text="Compact fits about a fifth more rows on screen. Lists apply it as they reload." />
+                    </StackPanel>
+                    <ComboBox Grid.Column="2" x:Name="DensityBox" MinWidth="140" VerticalAlignment="Center"
+                              SelectionChanged="Density_SelectionChanged">
+                        <ComboBoxItem Content="Comfortable" />
+                        <ComboBoxItem Content="Compact" />
+                    </ComboBox>
+                </Grid>
+            </Border>
+
+            <!--
+                The commit graph's look. Applied at once to every open history, redrawn from the commits
+                already read, and previewed here with the same drawing code.
+            -->
+            <Border Style="{StaticResource CardBorderStyle}" Padding="16">
+                <StackPanel Spacing="14">
+                    <Grid ColumnDefinitions="Auto,440,180" ColumnSpacing="14">
+                        <FontIcon Glyph="&#xE81C;" FontSize="{StaticResource IconSizeLarge}" VerticalAlignment="Center"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="Graph lines" FontWeight="SemiBold" />
+                            <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
+                                       Text="How a line is drawn when it moves to another lane." />
+                        </StackPanel>
+                        <ComboBox Grid.Column="2" x:Name="GraphStyleBox" MinWidth="160" VerticalAlignment="Center"
+                                  SelectionChanged="Graph_SelectionChanged">
+                            <ComboBoxItem Content="Curved" />
+                            <ComboBoxItem Content="Angular" />
+                            <ComboBoxItem Content="Rails" />
+                        </ComboBox>
+                    </Grid>
+                    <Grid ColumnDefinitions="Auto,440,180" ColumnSpacing="14">
+                        <FontIcon Glyph="&#xE8D2;" FontSize="{StaticResource IconSizeLarge}" VerticalAlignment="Center"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="Line weight" FontWeight="SemiBold" />
+                            <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
+                                       Text="How thick the lines and dots are." />
+                        </StackPanel>
+                        <ComboBox Grid.Column="2" x:Name="GraphWeightBox" MinWidth="160" VerticalAlignment="Center"
+                                  SelectionChanged="Graph_SelectionChanged">
+                            <ComboBoxItem Content="Thin" />
+                            <ComboBoxItem Content="Regular" />
+                            <ComboBoxItem Content="Bold" />
+                        </ComboBox>
+                    </Grid>
+                    <Grid ColumnDefinitions="Auto,440,180" ColumnSpacing="14">
+                        <FontIcon Glyph="&#xE9A6;" FontSize="{StaticResource IconSizeLarge}" VerticalAlignment="Center"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="Lane spacing" FontWeight="SemiBold" />
+                            <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
+                                       Text="How far apart the lanes sit. Wider is easier to follow, narrower leaves more room for the message." />
+                        </StackPanel>
+                        <ComboBox Grid.Column="2" x:Name="GraphSpacingBox" MinWidth="160" VerticalAlignment="Center"
+                                  SelectionChanged="Graph_SelectionChanged">
+                            <ComboBoxItem Content="Compact" />
+                            <ComboBoxItem Content="Regular" />
+                            <ComboBoxItem Content="Wide" />
+                        </ComboBox>
+                    </Grid>
+                    <Grid ColumnDefinitions="Auto,440,180" ColumnSpacing="14">
+                        <FontIcon Glyph="&#xE790;" FontSize="{StaticResource IconSizeLarge}" VerticalAlignment="Center"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="Graph colours" FontWeight="SemiBold" />
+                            <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
+                                       Text="A colour for each line of history, or one colour for all of it." />
+                        </StackPanel>
+                        <ComboBox Grid.Column="2" x:Name="GraphColourBox" MinWidth="160" VerticalAlignment="Center"
+                                  SelectionChanged="Graph_SelectionChanged">
+                            <ComboBoxItem Content="One per branch" />
+                            <ComboBoxItem Content="Single colour" />
+                        </ComboBox>
+                    </Grid>
+
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Preview" Style="{StaticResource SectionCaptionStyle}" />
+                        <Border HorizontalAlignment="Left" Padding="10,6"
+                                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                                CornerRadius="{StaticResource ControlCornerRadius}">
+                            <Canvas x:Name="GraphPreview" />
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- What the app opens on. -->
+            <Border Style="{StaticResource CardBorderStyle}" Padding="16">
+                <Grid ColumnDefinitions="Auto,440,Auto" ColumnSpacing="14">
+                    <FontIcon Glyph="&#xE721;" FontSize="{StaticResource IconSizeLarge}" VerticalAlignment="Center"
+                              Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="Start with the quick launcher" FontWeight="SemiBold" />
+                        <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
+                                   Text="Open on a single search box for your repositories instead of Home. Ctrl+K brings it back at any time." />
+                    </StackPanel>
+                    <ToggleSwitch Grid.Column="2" x:Name="StartScreenToggle" VerticalAlignment="Center"
+                                  Toggled="StartScreen_Toggled" />
+                </Grid>
+            </Border>
+
+            <!-- Tabs or a column: moved here from Home, which is now only about repositories. -->
+            <Border Style="{StaticResource CardBorderStyle}" Padding="16">
+                <Grid ColumnDefinitions="Auto,440,Auto" ColumnSpacing="14">
+                    <FontIcon Glyph="&#xE8A1;" FontSize="{StaticResource IconSizeLarge}" VerticalAlignment="Center"
+                              Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="Show open repositories as" FontWeight="SemiBold" />
+                        <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
+                                   Text="A column suits long names and many repositories; tabs suit a few." />
+                    </StackPanel>
+                    <ComboBox Grid.Column="2" x:Name="LayoutBox" MinWidth="180" VerticalAlignment="Center"
+                              SelectionChanged="Layout_SelectionChanged">
+                        <ComboBoxItem Content="Tabs across the top" />
+                        <ComboBoxItem Content="Column on the left" />
+                    </ComboBox>
+                </Grid>
+            </Border>
+
+            <!-- Repository tabs: what each one shows after the repository's name. -->
+            <Border Style="{StaticResource CardBorderStyle}" Padding="16">
+                <Grid ColumnDefinitions="Auto,440,Auto" ColumnSpacing="14">
+                    <FontIcon Glyph="&#xE8A9;" FontSize="{StaticResource IconSizeLarge}" VerticalAlignment="Center"
+                              Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="Repository tabs" FontWeight="SemiBold" />
+                        <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
+                                   Text="What each open repository's tab shows after its name." />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="2" VerticalAlignment="Center">
+                        <CheckBox x:Name="TabBranchBox" Content="Branch" Click="TabDetails_Click" />
+                        <CheckBox x:Name="TabChangesBox" Content="Uncommitted changes" Click="TabDetails_Click" />
+                        <CheckBox x:Name="TabAheadBehindBox" Content="Ahead / behind upstream" Click="TabDetails_Click" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!--
+                The search index. A local cache of every repository's commits, so the launcher can find
+                a commit in any of them. Rebuilt from git whenever it is lost; nothing leaves the machine.
+            -->
+            <Border Style="{StaticResource CardBorderStyle}" Padding="16">
+                <StackPanel Spacing="12">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+                        <FontIcon Glyph="&#xE721;" FontSize="{StaticResource IconSizeLarge}" VerticalAlignment="Center"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="Search across repositories" FontWeight="SemiBold" />
+                            <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
+                                       Text="Commit messages and authors of every repository Gitxen knows, kept in a local file so Ctrl+K can find a commit in any of them. It is a cache: it is rebuilt from git whenever it is deleted." />
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock x:Name="IndexStatusText" Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Rebuild" Click="RebuildIndex_Click" />
+                        <Button Content="Delete" Click="ClearIndex_Click" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!--
+                AI writing. Opt-in and the user's own key: nothing is sent to Anthropic until a Write
+                with AI or Explain button is pressed, and then only what that request needs.
+            -->
+            <Border Style="{StaticResource CardBorderStyle}" Padding="16">
+                <StackPanel Spacing="12">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+                        <FontIcon Glyph="&#xE945;" FontSize="{StaticResource IconSizeLarge}" VerticalAlignment="Center"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="AI writing (Claude)" FontWeight="SemiBold" />
+                            <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
+                                       Text="Commit messages, pull request descriptions and commit explanations, written by Claude when you press a Write with AI or Explain button. Only then is the staged diff, the branch's commits and diff, or the commit sent to Anthropic, using your own API key." />
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <PasswordBox x:Name="AiKeyBox" PlaceholderText="Anthropic API key (sk-ant-…)" Width="360" />
+                        <Button Content="Save key" Click="SaveAiKey_Click" />
+                        <Button Content="Remove key" Click="RemoveAiKey_Click" />
+                    </StackPanel>
+                    <TextBlock x:Name="AiKeyStatus" Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <!--
+                GitHub. The pages themselves live in the repository's navigation; this is where they are
+                switched on and where the GitHub CLI they depend on is pointed at. Nothing here holds a
+                credential: gh does, and is signed in once, outside this application.
+            -->
+            <Border Style="{StaticResource CardBorderStyle}" Padding="16">
+                <StackPanel Spacing="14">
+                    <Grid ColumnDefinitions="Auto,440,180" ColumnSpacing="14">
+                        <FontIcon Glyph="&#xE753;" FontSize="{StaticResource IconSizeLarge}" VerticalAlignment="Center"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="GitHub" FontWeight="SemiBold" />
+                            <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
+                                       Text="Pull requests, issues and Actions for repositories on github.com, through the GitHub CLI." />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="2" x:Name="GitHubToggle" OnContent="On" OffContent="Off"
+                                      VerticalAlignment="Center" Toggled="GitHubToggle_Toggled" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="Auto,260,*" ColumnSpacing="14">
+                        <FontIcon Glyph="&#xE8B7;" FontSize="{StaticResource IconSizeLarge}" VerticalAlignment="Center"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="GitHub CLI location" FontWeight="SemiBold" />
+                            <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
+                                       Text="Leave empty to find gh on PATH." />
+                        </StackPanel>
+                        <TextBox Grid.Column="2" x:Name="GhPathBox" PlaceholderText="gh"
+                                 VerticalAlignment="Center" LostFocus="GhPath_LostFocus" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="Auto,440,180" ColumnSpacing="14">
+                        <FontIcon Glyph="&#xE71D;" FontSize="{StaticResource IconSizeLarge}" VerticalAlignment="Center"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="Items per list" FontWeight="SemiBold" />
+                            <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
+                                       Text="How many pull requests, issues or runs to read at a time." />
+                        </StackPanel>
+                        <NumberBox Grid.Column="2" x:Name="GitHubListBox" MinWidth="140"
+                                   VerticalAlignment="Center"
+                                   Minimum="10" Maximum="200" SpinButtonPlacementMode="Compact"
+                                   ValueChanged="GitHubList_ValueChanged" />
+                    </Grid>
+
+                    <!-- Which gh this is and who it is signed in as, so a page that says it cannot reach
+                         GitHub can be diagnosed from here rather than by guessing. -->
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <ProgressRing x:Name="GitHubChecking" Width="16" Height="16" IsActive="False"
+                                      VerticalAlignment="Center" />
+                        <TextBlock x:Name="GitHubStatusText" VerticalAlignment="Center" TextWrapping="Wrap"
+                                   MaxWidth="420" Style="{StaticResource PageSubtitleStyle}" />
+                        <Button Content="Check again" Click="GitHubCheck_Click" />
+                        <Button x:Name="GitHubSignIn" Content="Sign in…" Click="GitHubSignIn_Click"
+                                Visibility="Collapsed" />
+                        <HyperlinkButton x:Name="GitHubGet" Content="Get gh" Padding="0"
+                                         NavigateUri="https://cli.github.com" Visibility="Collapsed" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Performance limits -->
+            <Border Style="{StaticResource CardBorderStyle}" Padding="16">
+                <StackPanel Spacing="16">
+                    <Grid ColumnDefinitions="Auto,440,180" ColumnSpacing="14">
+                        <FontIcon Glyph="&#xE81C;" FontSize="{StaticResource IconSizeLarge}" VerticalAlignment="Center"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="Commits per page" FontWeight="SemiBold" />
+                            <TextBlock Style="{StaticResource PageSubtitleStyle}"
+                                       Text="How much history to read at a time. Larger pages mean slower first paint." />
+                        </StackPanel>
+                        <NumberBox Grid.Column="2" x:Name="CommitsBox" MinWidth="140"
+                                   VerticalAlignment="Center"
+                                   Minimum="100" Maximum="50000" SpinButtonPlacementMode="Compact"
+                                   ValueChanged="Commits_ValueChanged" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="Auto,440,180" ColumnSpacing="14">
+                        <FontIcon Glyph="&#xE7C3;" FontSize="{StaticResource IconSizeLarge}" VerticalAlignment="Center"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="Maximum diff lines" FontWeight="SemiBold" />
+                            <TextBlock Style="{StaticResource PageSubtitleStyle}"
+                                       Text="Longer diffs are truncated, with a note saying how much was left out." />
+                        </StackPanel>
+                        <NumberBox Grid.Column="2" x:Name="DiffLinesBox" MinWidth="140"
+                                   VerticalAlignment="Center"
+                                   Minimum="100" Maximum="200000" SpinButtonPlacementMode="Compact"
+                                   ValueChanged="DiffLines_ValueChanged" />
+                    </Grid>
+
+                    <InfoBar IsOpen="True" IsClosable="False" Severity="Informational"
+                             Message="Both limits take effect on the next refresh." />
+                </StackPanel>
+            </Border>
+
+            <!--
+                Starting over. Everything the app remembers lives in one session file, so a reset is
+                a genuine first run — including the setup wizard — rather than a partial cleanup.
+            -->
+            <Border Style="{StaticResource CardBorderStyle}" Padding="16">
+                <Grid ColumnDefinitions="Auto,440,180" ColumnSpacing="14">
+                    <FontIcon Glyph="&#xE7A7;" FontSize="{StaticResource IconSizeLarge}" VerticalAlignment="Center"
+                              Foreground="{ThemeResource SystemFillColorCriticalBrush}" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="Reset application" FontWeight="SemiBold" />
+                        <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
+                                   Text="Clears open tabs, projects, recent repositories and every setting, then restarts as a first run. Repositories on disk are not touched." />
+                    </StackPanel>
+                    <Button Grid.Column="2" Content="Reset…" MinWidth="140" VerticalAlignment="Center"
+                            HorizontalAlignment="Right" Click="Reset_Click" />
+                </Grid>
+            </Border>
+
+            <!--
+                Who owns the software and what running it permits, stated in the application rather
+                than only in a file next to it: someone who installed a package never saw the
+                repository, and this is the one place they can find out.
+            -->
+            <Border Style="{StaticResource CardBorderStyle}" Padding="16">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="About Gitxen" FontWeight="SemiBold" />
+
+                    <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
+                               Text="{x:Bind VersionText}" />
+
+                    <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
+                               Text="Gitxen is free software, licensed under the GNU GPL v3 or later. Copyright © 2026 Kakoso. Source and licence: github.com/KakosoAi/gitxen" />
+
+                    <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
+                               Text="Gitxen runs git as a separate program. Git is not part of Gitxen, is not installed by it, and is licensed separately by its own authors." />
+
+                    <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
+                               Text="Your settings, projects and per-repository state are kept under %LOCALAPPDATA%\Gitxen, which is private to your Windows account." />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</views:RepositoryPage>

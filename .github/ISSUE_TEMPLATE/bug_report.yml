@@ -1,0 +1,34 @@
+name: Bug report
+description: Something does not work as it should
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Open a repository\n2. ..."
+  - type: input
+    id: version
+    attributes:
+      label: Gitxen version
+      description: Settings → About
+    validations:
+      required: true
+  - type: input
+    id: git
+    attributes:
+      label: git version and Windows version
+      placeholder: "git 2.50.0, Windows 11 24H2"
+  - type: textarea
+    id: log
+    attributes:
+      label: Activity console output
+      description: F12 in Gitxen shows the git commands it ran. Remove anything private.
+      render: shell

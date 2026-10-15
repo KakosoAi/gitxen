@@ -1,0 +1,124 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<UserControl
+    x:Class="Gitxen.Views.QuickLaunch"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:Gitxen.Models"
+    xmlns:views="using:Gitxen.Views"
+    HorizontalContentAlignment="Stretch"
+    VerticalContentAlignment="Stretch"
+    PreviewKeyDown="Root_PreviewKeyDown">
+
+    <UserControl.Resources>
+        <LinearGradientBrush x:Key="WordBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Offset="0" Color="#58A6FF" />
+            <GradientStop Offset="1" Color="#A874FF" />
+        </LinearGradientBrush>
+
+        <!-- The caret fades out once a word has been typed, so nothing blinks while it rests. -->
+        <Storyboard x:Key="CaretRest">
+            <DoubleAnimation Storyboard.TargetName="Caret" Storyboard.TargetProperty="Opacity"
+                             To="0" BeginTime="0:0:0.9" Duration="0:0:0.6">
+                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="48,*">
+
+        <!-- Behind everything: the plain window colour as the start screen, a dimmed veil when it is
+             opened over work with Ctrl+K. -->
+        <Rectangle x:Name="StartBackground" Grid.RowSpan="2"
+                   Fill="{ThemeResource SolidBackgroundFillColorBaseBrush}" />
+        <!-- Home's branch illustration, drifting behind the start screen; not behind the Ctrl+K card. -->
+        <views:BranchArt x:Name="Art" Grid.RowSpan="2" Visibility="Collapsed" />
+        <Rectangle x:Name="OverlayBackground" Grid.RowSpan="2" Visibility="Collapsed"
+                   Fill="{ThemeResource SmokeFillColorDefaultBrush}"
+                   PointerPressed="Veil_PointerPressed" />
+
+        <!-- Stands in for the title bar while this covers it, so the window can still be dragged. -->
+        <Border x:Name="DragArea" Background="Transparent" />
+
+        <!--
+            The brand, where the title bar usually carries it: small and a little muted, so it is there
+            without competing with the question. Not hit-testable, so dragging still works through it.
+        -->
+        <StackPanel x:Name="Brand" Orientation="Horizontal" Spacing="9" Margin="18,0,0,0"
+                    VerticalAlignment="Center" HorizontalAlignment="Left"
+                    IsHitTestVisible="False" Opacity="0.8">
+            <Image Source="ms-appx:///Assets/gitxen-32.png" Width="18" Height="18" VerticalAlignment="Center" />
+            <TextBlock Text="Gitxen" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <TextBlock x:Name="BrandVersion" VerticalAlignment="Center"
+                       FontSize="{StaticResource FontSizeCaption}"
+                       Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+        </StackPanel>
+
+        <Grid Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center"
+              Margin="24,0,24,140" Width="680">
+
+            <!-- Over work the box sits on a card, so the text stays readable on the veil. -->
+            <Border x:Name="Card" Visibility="Collapsed" Margin="-32"
+                    Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"
+                    BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    CornerRadius="12" />
+
+            <StackPanel Spacing="22">
+                <!--
+                    "What are we ___ today?", the verb retyped every few seconds. Left-aligned with the
+                    search box rather than centred: centred, the whole sentence slid sideways with every
+                    letter typed. Now "What are we" stays put and only what follows the word moves.
+                -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Spacing="10" Margin="2,0,0,0"
+                            AutomationProperties.Name="What are we building today?">
+                    <TextBlock Text="What are we" FontSize="34" FontWeight="SemiBold" />
+                    <StackPanel Orientation="Horizontal" Spacing="2">
+                        <TextBlock x:Name="Word" Text="building" FontSize="34" FontWeight="SemiBold"
+                                   Foreground="{StaticResource WordBrush}" />
+                        <Border x:Name="Caret" Width="3" Height="34" CornerRadius="1.5" Margin="0,6,-5,0"
+                                VerticalAlignment="Center" Opacity="0"
+                                Background="{StaticResource WordBrush}" />
+                    </StackPanel>
+                    <TextBlock Text="today?" FontSize="34" FontWeight="SemiBold" />
+                </StackPanel>
+
+                <AutoSuggestBox x:Name="SearchBox"
+                                PlaceholderText="Search your repositories and their commits"
+                                QueryIcon="Find" FontSize="18" MinHeight="44"
+                                UpdateTextOnSelect="False"
+                                AutomationProperties.Name="Search your repositories and their commits"
+                                TextChanged="SearchBox_TextChanged"
+                                QuerySubmitted="SearchBox_QuerySubmitted"
+                                GotFocus="SearchBox_GotFocus">
+                    <!-- Stretched, or the name column collapses: see the star-column trap in CLAUDE.md. -->
+                    <AutoSuggestBox.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        </Style>
+                    </AutoSuggestBox.ItemContainerStyle>
+                    <AutoSuggestBox.ItemTemplate>
+                        <DataTemplate x:DataType="models:LaunchItem">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Padding="2,6,2,6">
+                                <FontIcon Glyph="{x:Bind Glyph}" FontSize="{StaticResource IconSizeMedium}"
+                                          Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{x:Bind Path}" FontSize="{StaticResource FontSizeCaption}"
+                                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                               TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="2" Text="{x:Bind Detail}" VerticalAlignment="Center"
+                                           Style="{StaticResource SecondaryTextStyle}"
+                                           FontSize="{StaticResource FontSizeCaption}" />
+                            </Grid>
+                        </DataTemplate>
+                    </AutoSuggestBox.ItemTemplate>
+                </AutoSuggestBox>
+
+                <TextBlock Text="Enter opens it  ·  Esc skips  ·  Ctrl+K brings this back"
+                           HorizontalAlignment="Left" Margin="2,0,0,0"
+                           FontSize="{StaticResource FontSizeCaption}"
+                           Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -1,0 +1,147 @@
+﻿<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<views:RepositoryPage
+    x:Class="Gitxen.Views.FilesView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:Gitxen.ViewModels"
+    xmlns:views="using:Gitxen.Views">
+
+    <UserControl.Resources>
+        <DataTemplate x:Key="FileEntryTemplate" x:DataType="vm:FileEntryRow">
+            <Grid ColumnDefinitions="24,*,28,180,80,150" ColumnSpacing="10" Opacity="{x:Bind RowOpacity}"
+                  Background="Transparent" DoubleTapped="Entry_DoubleTapped">
+                <Grid.ContextFlyout>
+                    <MenuFlyout>
+                        <MenuFlyoutItem Text="Open" Click="OpenEntry_Click" />
+                        <MenuFlyoutItem Text="Show in File Explorer" Click="RevealEntry_Click" />
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem Text="Copy path" Click="CopyPath_Click" />
+                        <MenuFlyoutItem Text="Copy relative path" Click="CopyRelativePath_Click" />
+                    </MenuFlyout>
+                </Grid.ContextFlyout>
+
+                <Image Source="{x:Bind Icon, Mode=OneWay}" Width="20" Height="20"
+                       Visibility="{x:Bind IconVisibility, Mode=OneWay}" />
+                <FontIcon Glyph="{x:Bind Glyph}" FontSize="16"
+                          Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                          Visibility="{x:Bind GlyphVisibility, Mode=OneWay}" />
+
+                <TextBlock Grid.Column="1" Text="{x:Bind Name}" TextTrimming="CharacterEllipsis"
+                           VerticalAlignment="Center" ToolTipService.ToolTip="{x:Bind RelativePath}" />
+
+                <TextBlock Grid.Column="2" Text="{x:Bind Status}" Foreground="{x:Bind StatusBrush}"
+                           Style="{StaticResource CodeTextStyle}" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           ToolTipService.ToolTip="{x:Bind StatusTip}" />
+
+                <TextBlock Grid.Column="3" Text="{x:Bind TypeName, Mode=OneWay}" TextTrimming="CharacterEllipsis"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="4" Text="{x:Bind SizeText}" HorizontalAlignment="Right"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="5" Text="{x:Bind ModifiedText}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="Auto,Auto,*">
+
+        <Grid Grid.Row="0" Padding="20,16,20,6" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+            <StackPanel Spacing="2">
+                <TextBlock Text="Files" Style="{StaticResource PageTitleStyle}" />
+                <TextBlock x:Name="Summary" Style="{StaticResource PageSubtitleStyle}" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <TextBox x:Name="FilterBox" PlaceholderText="Filter this folder" Width="220"
+                         TextChanged="FilterBox_TextChanged" />
+                <ToggleButton x:Name="IgnoredToggle" Click="IgnoredToggle_Click" Height="32"
+                              AutomationProperties.Name="Show ignored files"
+                              ToolTipService.ToolTip="Show files git ignores (build output, dependencies, …)">
+                    <FontIcon Glyph="&#xE7B3;" FontSize="{StaticResource IconSizeMedium}" />
+                </ToggleButton>
+                <Button Click="Explorer_Click" Height="32"
+                        AutomationProperties.Name="Open in File Explorer" ToolTipService.ToolTip="Open this folder in File Explorer">
+                    <FontIcon Glyph="&#xEC50;" FontSize="{StaticResource IconSizeMedium}" />
+                </Button>
+                <Button Click="Refresh_Click" Height="32"
+                        AutomationProperties.Name="Refresh" ToolTipService.ToolTip="Read this folder again">
+                    <FontIcon Glyph="&#xE72C;" FontSize="{StaticResource IconSizeMedium}" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1" Padding="16,0,20,6" ColumnDefinitions="Auto,*" ColumnSpacing="6">
+            <Button x:Name="UpButton" Click="Up_Click" Padding="6" Background="Transparent" BorderThickness="0"
+                    AutomationProperties.Name="Up one folder" ToolTipService.ToolTip="Up one folder (Backspace)">
+                <FontIcon Glyph="&#xE74A;" FontSize="{StaticResource IconSizeSmall}" />
+            </Button>
+            <BreadcrumbBar x:Name="Breadcrumb" Grid.Column="1" VerticalAlignment="Center"
+                           ItemClicked="Breadcrumb_ItemClicked" />
+        </Grid>
+
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
+            <Grid Margin="12,0,8,12" RowDefinitions="Auto,*">
+                <!-- Column headings, the same widths as the rows beneath them. -->
+                <Grid Padding="16,4,16,6" ColumnDefinitions="24,*,28,180,80,150" ColumnSpacing="10">
+                    <TextBlock Grid.Column="1" Text="Name" Style="{StaticResource CaptionTextBlockStyle}" Opacity="0.7" />
+                    <TextBlock Grid.Column="2" Text="Git" Style="{StaticResource CaptionTextBlockStyle}" Opacity="0.7"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Grid.Column="3" Text="Type" Style="{StaticResource CaptionTextBlockStyle}" Opacity="0.7" />
+                    <TextBlock Grid.Column="4" Text="Size" Style="{StaticResource CaptionTextBlockStyle}" Opacity="0.7"
+                               HorizontalAlignment="Right" />
+                    <TextBlock Grid.Column="5" Text="Modified" Style="{StaticResource CaptionTextBlockStyle}" Opacity="0.7" />
+                </Grid>
+
+                <ListView x:Name="EntryList" Grid.Row="1" SelectionMode="Single"
+                          ItemTemplate="{StaticResource FileEntryTemplate}"
+                          SelectionChanged="EntryList_SelectionChanged"
+                          KeyDown="EntryList_KeyDown">
+                    <!-- Stretched, or the name column collapses: see the star-column trap in CLAUDE.md. -->
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem" BasedOn="{StaticResource DefaultListViewItemStyle}">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="MinHeight" Value="34" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                </ListView>
+
+                <TextBlock x:Name="EmptyText" Grid.Row="1" Text="This folder is empty."
+                           Style="{StaticResource PageSubtitleStyle}" Margin="16,8" Visibility="Collapsed" />
+            </Grid>
+
+            <!-- What the selected file holds. -->
+            <Grid x:Name="PreviewPane" Grid.Column="1" Width="460" Margin="0,0,20,12" Padding="14,12"
+                  CornerRadius="8" RowDefinitions="Auto,*" RowSpacing="10"
+                  Background="{ThemeResource LayerFillColorDefaultBrush}"
+                  BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+                  Visibility="Collapsed">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <StackPanel Spacing="2">
+                        <TextBlock x:Name="PreviewName" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock x:Name="PreviewDetail" Style="{StaticResource CaptionTextBlockStyle}" Opacity="0.7" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                        <Button Click="OpenSelected_Click" Padding="6"
+                                AutomationProperties.Name="Open" ToolTipService.ToolTip="Open with its default app">
+                            <FontIcon Glyph="&#xE8A7;" FontSize="{StaticResource IconSizeSmall}" />
+                        </Button>
+                        <Button Click="ClosePreview_Click" Padding="6"
+                                AutomationProperties.Name="Close preview" ToolTipService.ToolTip="Close the preview">
+                            <FontIcon Glyph="&#xE711;" FontSize="{StaticResource IconSizeSmall}" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <ScrollViewer x:Name="TextPreview" Grid.Row="1" HorizontalScrollBarVisibility="Auto"
+                              HorizontalScrollMode="Auto" Visibility="Collapsed">
+                    <TextBlock x:Name="PreviewText" FontFamily="Cascadia Mono, Consolas" FontSize="12"
+                               IsTextSelectionEnabled="True" />
+                </ScrollViewer>
+                <Image x:Name="ImagePreview" Grid.Row="1" Stretch="Uniform" VerticalAlignment="Top"
+                       Visibility="Collapsed" />
+                <TextBlock x:Name="NoPreview" Grid.Row="1" TextWrapping="Wrap" Opacity="0.7" Visibility="Collapsed" />
+            </Grid>
+        </Grid>
+    </Grid>
+</views:RepositoryPage>

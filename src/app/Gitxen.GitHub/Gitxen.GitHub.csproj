@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Gitxen's GitHub layer: pull requests, issues and workflow runs, through the GitHub CLI.
+
+    Like Gitxen.Git this project references nothing: no other project, no package, only the .NET base
+    class library. It does not speak to GitHub itself and holds no credential. It runs `gh`, which is
+    the one thing on the machine that has been signed in, and reads what it prints. Everything here is
+    written from `gh help` and from experiments against real repositories.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Gitxen.GitHub</RootNamespace>
+    <AssemblyName>Gitxen.GitHub</AssemblyName>
+  </PropertyGroup>
+
+</Project>

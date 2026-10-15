@@ -1,0 +1,175 @@
+﻿<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<views:RepositoryPage
+    x:Class="Gitxen.Views.OverviewView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:Gitxen.ViewModels"
+    xmlns:views="using:Gitxen.Views">
+
+    <UserControl.Resources>
+        <!--
+            One headline number, and a way into the section behind it. The label says what it is;
+            the value is the text, never a colour.
+        -->
+        <DataTemplate x:Key="StatTileTemplate" x:DataType="vm:StatTile">
+            <Button Click="Tile_Click" Tag="{x:Bind Section}" ToolTipService.ToolTip="{x:Bind Tip}"
+                    AutomationProperties.Name="{x:Bind Label}"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                    HorizontalContentAlignment="Left" VerticalContentAlignment="Top"
+                    Padding="14,12" CornerRadius="8"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                <StackPanel Spacing="2">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="{x:Bind Glyph}" FontSize="{StaticResource IconSizeSmall}"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="{x:Bind Label}" FontSize="{StaticResource FontSizeCaption}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                    <TextBlock Text="{x:Bind Value}" FontSize="24" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{x:Bind Detail}" FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Button>
+        </DataTemplate>
+
+        <Style x:Key="ChartCardStyle" TargetType="Border" BasedOn="{StaticResource CardBorderStyle}">
+            <Setter Property="Padding" Value="18,16" />
+        </Style>
+        <Style x:Key="ChartTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+        </Style>
+        <Style x:Key="ChartNoteStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <ScrollViewer x:Name="Scroller" HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Padding="20,16,20,24" Spacing="14" MaxWidth="1480" HorizontalAlignment="Stretch">
+
+                <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="Overview" Style="{StaticResource PageTitleStyle}" />
+                        <TextBlock x:Name="Subtitle" Style="{StaticResource PageSubtitleStyle}" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Click="Refresh_Click" VerticalAlignment="Center"
+                            AutomationProperties.Name="Refresh" ToolTipService.ToolTip="Read the repository again">
+                        <FontIcon Glyph="&#xE72C;" FontSize="{StaticResource IconSizeMedium}" />
+                    </Button>
+                </Grid>
+
+                <ProgressBar x:Name="LoadingBar" IsIndeterminate="True" Visibility="Collapsed" />
+
+                <TextBlock x:Name="EmptyText" Visibility="Collapsed" Style="{StaticResource PageSubtitleStyle}"
+                           Text="No commits yet. Make the first one and this page fills in." />
+
+                <StackPanel x:Name="Body" Spacing="14" Visibility="Collapsed">
+
+                    <!-- The headline numbers. -->
+                    <ItemsRepeater x:Name="Tiles" ItemTemplate="{StaticResource StatTileTemplate}">
+                        <ItemsRepeater.Layout>
+                            <UniformGridLayout MinItemWidth="168" MinItemHeight="104" MinColumnSpacing="10"
+                                               MinRowSpacing="10" ItemsStretch="Fill" />
+                        </ItemsRepeater.Layout>
+                    </ItemsRepeater>
+
+                    <!-- Commits per month, first commit to last. -->
+                    <Border Style="{StaticResource ChartCardStyle}">
+                        <StackPanel Spacing="10">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="Commits over time" Style="{StaticResource ChartTitleStyle}" />
+                                <TextBlock x:Name="TimelineNote" Grid.Column="1" Style="{StaticResource ChartNoteStyle}" />
+                            </Grid>
+                            <Grid x:Name="TimelineHost" Height="210" Background="Transparent"
+                                  PointerMoved="Timeline_PointerMoved" PointerExited="Timeline_PointerExited">
+                                <Canvas x:Name="TimelineCanvas" />
+                                <Canvas x:Name="TimelineHover" IsHitTestVisible="False" />
+                                <Border x:Name="TimelineTip" Style="{StaticResource CardBorderStyle}" Padding="10,6"
+                                        HorizontalAlignment="Left" VerticalAlignment="Top" IsHitTestVisible="False"
+                                        Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}" Visibility="Collapsed">
+                                    <StackPanel>
+                                        <TextBlock x:Name="TimelineTipValue" FontWeight="SemiBold" />
+                                        <TextBlock x:Name="TimelineTipLabel" Style="{StaticResource ChartNoteStyle}" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <Grid ColumnDefinitions="5*,7*" ColumnSpacing="14">
+                        <!-- Languages by share of code. -->
+                        <Border Style="{StaticResource ChartCardStyle}">
+                            <StackPanel Spacing="12">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="Languages" Style="{StaticResource ChartTitleStyle}" />
+                                    <TextBlock Grid.Column="1" Text="by size of code and markup" Style="{StaticResource ChartNoteStyle}" />
+                                </Grid>
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="20">
+                                    <Grid Width="176" Height="176" VerticalAlignment="Top">
+                                        <Canvas x:Name="DonutCanvas" Width="176" Height="176" />
+                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+                                            <TextBlock x:Name="DonutValue" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                            <TextBlock x:Name="DonutLabel" Style="{StaticResource ChartNoteStyle}" HorizontalAlignment="Center" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <StackPanel x:Name="LanguageLegend" Grid.Column="1" Spacing="7" VerticalAlignment="Center" />
+                                </Grid>
+                                <TextBlock x:Name="NoLanguages" Visibility="Collapsed" Style="{StaticResource ChartNoteStyle}"
+                                           Text="No source files recognised." />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Every day of the last year. -->
+                        <Border Grid.Column="1" Style="{StaticResource ChartCardStyle}">
+                            <StackPanel Spacing="10">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="The last twelve months" Style="{StaticResource ChartTitleStyle}" />
+                                    <TextBlock x:Name="HeatmapNote" Grid.Column="1" Style="{StaticResource ChartNoteStyle}" />
+                                </Grid>
+                                <Viewbox Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left">
+                                    <Canvas x:Name="HeatmapCanvas" />
+                                </Viewbox>
+                                <StackPanel x:Name="HeatmapLegend" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="14">
+                        <Border Style="{StaticResource ChartCardStyle}">
+                            <StackPanel Spacing="10">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Text="Top contributors" Style="{StaticResource ChartTitleStyle}" />
+                                    <TextBlock x:Name="ContributorsNote" Grid.Column="1" Style="{StaticResource ChartNoteStyle}" />
+                                </Grid>
+                                <StackPanel x:Name="ContributorBars" Spacing="8" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="1" Style="{StaticResource ChartCardStyle}">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="When commits happen" Style="{StaticResource ChartTitleStyle}" />
+                                <Grid x:Name="WeekdayHost" Height="150">
+                                    <Canvas x:Name="WeekdayCanvas" />
+                                </Grid>
+                                <TextBlock x:Name="HoursNote" Style="{StaticResource ChartNoteStyle}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="2" Style="{StaticResource ChartCardStyle}">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="Files" Style="{StaticResource ChartTitleStyle}" />
+                                <StackPanel x:Name="KindBars" Spacing="8" />
+                                <TextBlock Text="Largest" Style="{StaticResource ChartNoteStyle}" Margin="0,6,0,0" />
+                                <StackPanel x:Name="LargestFiles" Spacing="4" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</views:RepositoryPage>

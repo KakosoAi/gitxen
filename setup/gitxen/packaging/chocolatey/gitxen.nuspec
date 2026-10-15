@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>gitxen</id>
+    <version>{{VERSION}}</version>
+    <packageSourceUrl>https://github.com/KakosoAi/gitxen/tree/main/setup/gitxen/packaging/chocolatey</packageSourceUrl>
+    <owners>Kakoso</owners>
+    <title>Gitxen</title>
+    <authors>Kakoso</authors>
+    <projectUrl>https://github.com/KakosoAi/gitxen</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/KakosoAi/gitxen/main/src/app/Gitxen/Assets/gitxen-128.png</iconUrl>
+    <copyright>Copyright (c) 2026 Kakoso</copyright>
+    <licenseUrl>https://github.com/KakosoAi/gitxen/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/KakosoAi/gitxen</projectSourceUrl>
+    <docsUrl>https://github.com/KakosoAi/gitxen/blob/main/src/app/Gitxen/README.md</docsUrl>
+    <bugTrackerUrl>https://github.com/KakosoAi/gitxen/issues</bugTrackerUrl>
+    <tags>git git-client git-gui source-control version-control winui admin</tags>
+    <summary>A git client for Windows, built with WinUI 3.</summary>
+    <description><![CDATA[
+Gitxen is a git client for Windows with a WinUI 3 interface.
+
+* Staged and unstaged changes, with hunk-level staging, discard, amend and sign-off
+* A commit graph with ref badges, client-side filtering and a real `git log` search
+* Branches, remotes, tags, stashes, submodules and worktrees
+* Reflog recovery, and conflict resolution with a merge tool or by hand
+* Several repositories open at once, as tabs or as a left-hand column
+
+Gitxen is free software under the GPL-3.0-or-later, copyright (c) 2026 Kakoso. It runs the git you already have installed; git is a separate program under
+its own licence.
+
+#### Notes
+
+The installer is machine-wide and adds `gitxen` to `PATH`. It carries its own copies of the .NET
+runtime and the Windows App SDK, so nothing else has to be installed first.
+]]></description>
+    <releaseNotes>https://github.com/KakosoAi/gitxen/releases/tag/{{RELEASE_TAG}}</releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

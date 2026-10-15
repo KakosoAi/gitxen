@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Gitxen's own git layer.
+
+    This project deliberately references nothing: no other project, no package. It replaced the
+    engine Gitxen was forked with, and staying independent is what makes the application Kakoso's
+    to license. Everything here is written from git's documented command-line behaviour and the
+    .NET base class library, and nothing else may be added to it.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Gitxen.Git</RootNamespace>
+    <AssemblyName>Gitxen.Git</AssemblyName>
+  </PropertyGroup>
+
+</Project>

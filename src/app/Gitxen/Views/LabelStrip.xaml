@@ -1,0 +1,29 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<UserControl
+    x:Class="Gitxen.Views.LabelStrip"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:Gitxen.ViewModels">
+
+    <!--
+        A run of labels as coloured chips, each in the colour its repository gave it. One control for
+        the pull request list, the issue list and both detail panes, so a label looks the same wherever
+        it appears.
+    -->
+    <ItemsControl x:Name="Chips">
+        <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="4" />
+            </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:LabelChip">
+                <Border CornerRadius="9" Padding="8,1,8,2" Background="{x:Bind Background}"
+                        ToolTipService.ToolTip="{x:Bind Description}">
+                    <TextBlock Text="{x:Bind Name}" FontSize="{StaticResource FontSizeCaption}"
+                               Foreground="{x:Bind Foreground}" />
+                </Border>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+</UserControl>

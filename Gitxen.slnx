@@ -1,0 +1,28 @@
+﻿<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="CommonAssemblyInfo.cs" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Build.targets" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+  </Folder>
+  <Folder Name="/Solution Items/eng/">
+    <File Path="eng/Gitxen.ruleset" />
+    <File Path="eng/Layout.props" />
+    <File Path="eng/stylecop.json" />
+  </Folder>
+  <Folder Name="/setup/">
+    <File Path="setup/gitxen/version.txt" />
+    <File Path="setup/gitxen/Package.wxs" />
+  </Folder>
+  <Folder Name="/src/app/">
+    <Project Path="src/app/Gitxen/Gitxen.csproj" />
+    <Project Path="src/app/Gitxen.Core/Gitxen.Core.csproj" />
+    <Project Path="src/app/Gitxen.Cli/Gitxen.Cli.csproj" />
+    <Project Path="src/app/Gitxen.Git/Gitxen.Git.csproj" />
+    <Project Path="src/app/Gitxen.GitHub/Gitxen.GitHub.csproj" />
+  </Folder>
+</Solution>
