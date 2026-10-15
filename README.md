@@ -29,7 +29,7 @@ beta: it works and is used daily, and it still changes quickly.
 
 ## Status
 
-Gitxen is in beta (current version: 0.10.1). The WinUI 3 front-end lives in
+Gitxen is in beta (current version: 0.11.0). The WinUI 3 front-end lives in
 [src/app/Gitxen/](src/app/Gitxen/). It runs the installed `git` as a
 subprocess through its own small layer, [src/app/Gitxen.Git/](src/app/Gitxen.Git/), and no longer
 links any Git Extensions code. The original WinForms application and the engine it shared were

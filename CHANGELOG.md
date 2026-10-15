@@ -6,6 +6,24 @@ All notable changes to Gitxen are listed here. The format follows
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-15
+
+### Added
+
+- **A real terminal in the bottom pane:** each shell is drawn by xterm.js and typed into directly,
+  so prompts such as Oh My Posh, colours and full-screen programs work. Font, size, cursor and colour
+  scheme are taken from Windows Terminal's settings, and a button opens the folder in Windows
+  Terminal itself. Ctrl+C copies a selection or interrupts; Ctrl+V and right-click paste.
+- **Searchable Settings:** a search box finds any setting by the words on its card and scrolls to it.
+- Tests for the GitHub parsers (against captured `gh` output) and for `GitDirectory`.
+- Scoop bucket: `scoop bucket add kakoso https://github.com/KakosoAi/scoop-bucket`.
+
+### Changed
+
+- History is now **Timeline**, second in the sidebar after Overview.
+- Git config and Maintenance moved into Settings, as categories beside General.
+- The terminal's separate command box is gone.
+
 ## [0.10.1] - 2026-10-15
 
 ### Fixed
@@ -48,6 +66,7 @@ not part of this repository.
 
 - Licence: GPL-3.0-or-later. The project was previously proprietary.
 
-[Unreleased]: https://github.com/KakosoAi/gitxen/compare/gitxen-v0.10.1...HEAD
+[Unreleased]: https://github.com/KakosoAi/gitxen/compare/gitxen-v0.11.0...HEAD
+[0.11.0]: https://github.com/KakosoAi/gitxen/compare/gitxen-v0.10.1...gitxen-v0.11.0
 [0.10.1]: https://github.com/KakosoAi/gitxen/compare/gitxen-v0.10.0...gitxen-v0.10.1
 [0.10.0]: https://github.com/KakosoAi/gitxen/releases/tag/gitxen-v0.10.0
