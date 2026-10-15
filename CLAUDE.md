@@ -29,12 +29,13 @@ pwsh ./setup/gitxen/build/Build-Gitxen.ps1   # MSI, portable zip, package manife
 Requires the .NET 10 SDK pinned in `global.json` and a real Windows SDK install — the WinUI
 toolchain (`cswinrt.exe`, PRI tasks) reads the `KitsRoot10` registry value. Windows-only, x64.
 
-**There are no tests.** The inherited suites were deleted along with the code they covered. When
-tests return they should be NUnit + NSubstitute + AwesomeAssertions (never ClassicAssert, never
+**Tests live in `src/app/Gitxen.Tests/`** (`dotnet test src/app/Gitxen.Tests/Gitxen.Tests.csproj
+-p:Platform=x64`). They are NUnit + NSubstitute + AwesomeAssertions (never ClassicAssert, never
 Moq), with names that keep the method name and add a snake_case suffix
-(`MyMethod_should_return_expected`) and no Arrange/Act/Assert comments. The highest-value things to
-cover are the parsers in `Gitxen.Git` (`GitStatus`, `GitDiff`, `GitLog`), `Diff/HunkSplitter.cs`,
-`Terminal/TerminalOutputBuffer.cs` and `Services/GitDirectory.cs`: all pure string-in/string-out.
+(`MyMethod_should_return_expected`) and no Arrange/Act/Assert comments. They cover the parsers in
+`Gitxen.Git`, `Diff/HunkSplitter.cs` (linked in as a source file, since the WinUI project cannot be
+referenced) and `SecretScanner`. Still to cover: `Terminal/TerminalOutputBuffer.cs`,
+`Services/GitDirectory.cs` and the GitHub parsers: all pure string-in/string-out.
 
 **Building is not proof it runs.** The csproj carries several workarounds for genuine .NET 10 SDK /
 Windows App SDK version-resolution defects, each commented in place. Some of those failures appear

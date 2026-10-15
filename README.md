@@ -1,6 +1,13 @@
 ﻿# Gitxen
 
+[![CI](https://github.com/KakosoAi/gitxen/actions/workflows/ci.yml/badge.svg)](https://github.com/KakosoAi/gitxen/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/KakosoAi/gitxen?include_prereleases&label=release)](https://github.com/KakosoAi/gitxen/releases)
+[![Licence: GPL-3.0-or-later](https://img.shields.io/badge/licence-GPL--3.0--or--later-blue)](LICENSE)
+![Platform: Windows 10+ x64](https://img.shields.io/badge/platform-Windows%2010%2B%20x64-lightgrey)
+
 Gitxen is a git client for Windows, built with WinUI 3.
+
+<!-- Add a screenshot or GIF here: docs/images/gitxen.png -->
 
 It shows staged and unstaged changes with hunk-level staging, a commit graph with ref badges and
 live search, branches, remotes, tags, stashes, submodules, worktrees, reflog recovery and conflict
@@ -8,6 +15,17 @@ resolution — with several repositories open at once as tabs.
 
 Gitxen is free software under the [GNU GPL v3 or later](LICENSE), © 2026 Kakoso. It is in public
 beta: it works and is used daily, and it still changes quickly.
+
+## Highlights
+
+* **Fast, honest git:** it runs the `git` you have installed, so what you see is what git did; press
+  F12 to watch every command.
+* **Stage by hunk,** visual interactive rebase, reflog recovery and conflict resolution.
+* **Search every repository** you have opened from one box (Ctrl+K), by message, author or content.
+* **Safety nets:** warns before committing secrets or huge files, and can undo the last operation.
+* **GitHub built in:** pull requests, issues and Actions, with one account per repository.
+* **`gx` command line** for scripting, account switching and starting new repositories.
+* **No telemetry**, and no sign-in of its own.
 
 ## Status
 
@@ -77,5 +95,6 @@ project.
 ## Links
 
 * Issue tracker: [github.com/KakosoAi/gitxen/issues](https://github.com/KakosoAi/gitxen/issues)
+* Documentation: [docs/](docs/README.md) · [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md)
 * Contributing: [CONTRIBUTING.md](CONTRIBUTING.md) · Security: [SECURITY.md](SECURITY.md) ·
   Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)

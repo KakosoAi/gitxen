@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The parsers and pure helpers. Test infrastructure (NUnit, NSubstitute, AwesomeAssertions) comes
+    from eng/Tests.targets, which recognises this project by its ".Tests" suffix.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Gitxen.Tests</RootNamespace>
+    <AssemblyName>Gitxen.Tests</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Gitxen.Git\Gitxen.Git.csproj" />
+    <ProjectReference Include="..\Gitxen.Core\Gitxen.Core.csproj" />
+    <!-- Plain C#, no UI types: compiled here instead of referencing the WinUI application. -->
+    <Compile Include="..\Gitxen\Diff\HunkSplitter.cs" Link="Linked\HunkSplitter.cs" />
+  </ItemGroup>
+
+</Project>

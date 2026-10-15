@@ -37,5 +37,6 @@ available under the GPL-3.0-or-later.
 
 ## 5. How you agree
 
-By opening a pull request that says `I agree to the Gitxen CLA.`, or by contacting the maintainers to
-sign, you accept this agreement for that and every later Contribution.
+By replying to the CLA bot on your pull request with
+`I have read the CLA Document and I hereby sign the CLA`, or by contacting the maintainers to sign,
+you accept this agreement for that and every later Contribution.

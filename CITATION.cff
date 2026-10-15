@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: If you use Gitxen in your work, please cite it as below.
+title: Gitxen
+type: software
+license: GPL-3.0-or-later
+version: 0.10.0
+date-released: 2026-10-15
+repository-code: https://github.com/KakosoAi/gitxen
+authors:
+  - name: Kakoso

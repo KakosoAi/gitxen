@@ -17,7 +17,8 @@ agree to the [Contributor Licence Agreement](CLA.md): you keep the copyright in 
 Kakoso the right to distribute it under the GPL and under other terms (that is what keeps the
 [commercial option](COMMERCIAL.md) possible), and you have the right to contribute it.
 
-Say so in the pull request description by writing: `I agree to the Gitxen CLA.`
+A bot comments on your first pull request; sign by replying with exactly:
+`I have read the CLA Document and I hereby sign the CLA`. You do this once.
 
 ## Working on the code
 

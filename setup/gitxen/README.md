@@ -98,7 +98,8 @@ anything by accident. Set these in the repository's settings once the correspond
 Nothing here is signed. Unsigned, users get a SmartScreen warning on the MSI, and the MSIX cannot be
 installed at all. A code-signing certificate applied to the MSI and the MSIX is needed before either
 is published; for open-source projects SignPath offers free certificates, and Gitxen qualifies as
-GPL-3.0-or-later.
+GPL-3.0-or-later. Apply at <https://signpath.org/apply> once the repository is public, then add the
+SignPath step to the release workflow and sign the MSI before it is attached.
 
 To test the MSIX locally without one, create a self-signed certificate whose subject matches the
 manifest's `Publisher`, sign with it, and trust it:

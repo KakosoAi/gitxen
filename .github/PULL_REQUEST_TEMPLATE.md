@@ -9,4 +9,4 @@
 - [ ] A parser change was checked against real git / gh output
 - [ ] New files start with the SPDX header
 
-I agree to the Gitxen CLA.
+The CLA bot will ask first-time contributors to sign [CLA.md](../CLA.md).

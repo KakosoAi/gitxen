@@ -132,6 +132,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
 
     steps:
       - name: Download distribution files
@@ -139,6 +141,13 @@ jobs:
         with:
           name: gitxen-${{ needs.build.outputs.version }}-dist
           path: dist
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/*.msi
+            dist/*.zip
 
       - name: Create the release
         env:
