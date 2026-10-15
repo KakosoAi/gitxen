@@ -157,7 +157,7 @@ jobs:
           # published and would only mislead. It stays on the workflow run for signing.
           # 0.x is a beta: published as a pre-release so it is not offered as the stable version.
           # The MSIX is built and summed but not attached, so its line comes out of the published sums.
-          grep -v '\.msix$' dist/SHA256SUMS.txt > dist/SHA256SUMS.attached && mv dist/SHA256SUMS.attached dist/SHA256SUMS.txt
+          grep -v -i '\.msix' dist/SHA256SUMS.txt > dist/SHA256SUMS.attached && mv dist/SHA256SUMS.attached dist/SHA256SUMS.txt
           PRERELEASE=""
           if [[ "${{ needs.build.outputs.version }}" == 0.* ]]; then PRERELEASE="--prerelease"; fi
           gh release create "${{ needs.build.outputs.tag }}" \
