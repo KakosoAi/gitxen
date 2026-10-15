@@ -25,7 +25,7 @@ internal static class AccountCommand
                 return Use(git, status, arguments[1]);
 
             case "auto":
-                git.Write(new GitArgs("config").Add("--local", "--unset", GitHubAccountChoice.CredentialUserKey));
+                await git.WriteAsync(new GitArgs("config").Add("--local", "--unset", GitHubAccountChoice.CredentialUserKey));
                 (string login, AccountSource source) = GitHubAccountChoice.Resolve(git);
                 Output.Line(source == AccountSource.Gitxen
                     ? $"This repository now uses {Output.Bold(login)}, the account Gitxen found for it."
