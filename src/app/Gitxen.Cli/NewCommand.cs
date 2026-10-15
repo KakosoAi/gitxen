@@ -51,7 +51,7 @@ internal static class NewCommand
             github.Length > 0,
             github != "public");
 
-        GitResult owner = new GitCli(Directory.Exists(parent) ? parent : Directory.GetCurrentDirectory()).Read(new GitArgs("config").Add("--get", "user.name"));
+        GitResult owner = await new GitCli(Directory.Exists(parent) ? parent : Directory.GetCurrentDirectory()).ReadAsync(new GitArgs("config").Add("--get", "user.name"));
         RepositoryTemplate template = await RepositoryStarter.PrepareAsync(choices, gh, owner.Succeeded ? owner.Output.Trim() : "");
         (GitOperationResult result, string directory) = new RepositoryCreator().Create(template);
 
