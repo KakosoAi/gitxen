@@ -105,6 +105,40 @@ jobs:
         shell: pwsh
         run: ./setup/gitxen/build/Build-Gitxen.ps1 -Version ${{ steps.version.outputs.version }} -Msix
 
+      # Code signing through SignPath Foundation (free for open source). Inert until the repository
+      # sets the SIGNPATH_ORGANIZATION_ID variable and the SIGNPATH_API_TOKEN secret; see
+      # CODE_SIGNING.md. Only tag builds are signed, never a manual test build.
+      - name: Upload the unsigned installer for signing
+        id: unsigned
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' && github.event_name == 'push' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gitxen-${{ steps.version.outputs.version }}-unsigned
+          path: artifacts/Release/gitxen/*.msi
+          retention-days: 1
+
+      - name: Sign the installer
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' && github.event_name == 'push' }}
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: gitxen
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: msi
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: artifacts/Release/gitxen/signed
+
+      - name: Use the signed installer
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' && github.event_name == 'push' }}
+        shell: pwsh
+        run: |
+          Move-Item artifacts/Release/gitxen/signed/*.msi artifacts/Release/gitxen/ -Force
+          Remove-Item artifacts/Release/gitxen/signed -Recurse -Force
+          # Signing changed the MSI, so its checksum and the manifests that quote it are redone.
+          ./setup/gitxen/build/Build-Gitxen.ps1 -Version ${{ steps.version.outputs.version }} -ChecksumsOnly
+
       - name: Upload distribution files
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

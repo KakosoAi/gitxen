@@ -95,11 +95,12 @@ anything by accident. Set these in the repository's settings once the correspond
 
 ### Signing
 
-Nothing here is signed. Unsigned, users get a SmartScreen warning on the MSI, and the MSIX cannot be
-installed at all. A code-signing certificate applied to the MSI and the MSIX is needed before either
-is published; for open-source projects SignPath offers free certificates, and Gitxen qualifies as
-GPL-3.0-or-later. Apply at <https://signpath.org/apply> once the repository is public, then add the
-SignPath step to the release workflow and sign the MSI before it is attached.
+The release workflow signs the MSI through SignPath Foundation's free open-source programme once
+the repository has `SIGNPATH_ORGANIZATION_ID` (variable) and `SIGNPATH_API_TOKEN` (secret); until
+then releases are unsigned and users get a SmartScreen warning. Signing runs after the build, and
+`Build-Gitxen.ps1 -ChecksumsOnly` then recomputes `SHA256SUMS.txt` and the manifests for the signed
+file. The policy, and the steps to turn it on, are in [CODE_SIGNING.md](../../CODE_SIGNING.md). The
+MSIX is still unsigned and cannot be installed as published.
 
 To test the MSIX locally without one, create a self-signed certificate whose subject matches the
 manifest's `Publisher`, sign with it, and trust it:

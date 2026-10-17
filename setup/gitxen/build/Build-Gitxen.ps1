@@ -29,6 +29,10 @@
 .PARAMETER Msix
     Also builds an MSIX package. Requires makeappx.exe from the Windows SDK.
 
+.PARAMETER ChecksumsOnly
+    Builds nothing: recomputes SHA256SUMS.txt and the package manifests from the files already in
+    the output folder. The release workflow runs this after code signing, which changes the MSI.
+
 .PARAMETER MsixPublisher
     Subject name for the MSIX publisher, which has to match the certificate the package will be
     signed with. Defaults to a placeholder that is only good for local testing.
@@ -47,6 +51,7 @@ param(
     [string] $OutputDir,
     [switch] $SkipPublish,
     [switch] $Msix,
+    [switch] $ChecksumsOnly,
     [string] $MsixPublisher = 'CN=Kakoso'
 )
 
@@ -419,7 +424,16 @@ function Expand-Templates([hashtable] $tokens)
 
 New-Item -Path $OutputDir -ItemType Directory -Force | Out-Null
 
-if ($SkipPublish)
+if ($ChecksumsOnly)
+{
+    if (-not (Test-Path (Join-Path $OutputDir $msiName)))
+    {
+        throw "-ChecksumsOnly was given but there is no $msiName in $OutputDir."
+    }
+
+    Write-Stage 'Recomputing checksums and manifests for the existing packages'
+}
+elseif ($SkipPublish)
 {
     if (-not (Test-Path (Join-Path $payloadDir 'Gitxen.exe')))
     {
@@ -433,14 +447,17 @@ else
     New-Payload
 }
 
-Add-PayloadExtras
-
-New-Msi
-New-PortableArchive
-
-if ($Msix)
+if (-not $ChecksumsOnly)
 {
-    New-MsixPackage
+    Add-PayloadExtras
+
+    New-Msi
+    New-PortableArchive
+
+    if ($Msix)
+    {
+        New-MsixPackage
+    }
 }
 
 New-Checksums
