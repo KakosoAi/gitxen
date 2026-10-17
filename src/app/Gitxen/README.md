@@ -343,7 +343,8 @@ uncommitted change count and how far it is ahead of or behind its upstream, each
 
 A first-run wizard that sets the git identity, the theme, the layout and the mode, then scans a
 folder for repositories and imports the ones you pick, grouped into projects taken from the folders
-they were found in. Reachable again from Home.
+they were found in. Its repository step is `Views/RepositoryImporter`, the same finder Home's
+**Add repositories** opens on its own; the whole wizard can be run again from Home's Settings.
 
 Open / clone / init, multiple repositories as tabs or a left-hand column, and a Home tab that is
 always first: recent repositories with their current branch and last commit, organised into projects

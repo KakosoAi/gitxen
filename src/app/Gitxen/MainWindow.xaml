@@ -413,6 +413,10 @@
             nothing behind it can be clicked while it is up. Last child, so it draws over everything
             else. Created collapsed and shown when the session says setup has not been through.
         -->
+        <!-- Home's "Add repositories": the repository finder on its own, without the rest of setup. -->
+        <views:AddRepositoriesView x:Name="AddRepositories" Grid.RowSpan="4" Visibility="Collapsed"
+                                   Completed="AddRepositories_Completed" />
+
         <views:SetupWizardView x:Name="SetupWizard" Grid.RowSpan="4"
                                Visibility="Collapsed"
                                ThemeChanged="SetupWizard_ThemeChanged"

@@ -321,6 +321,9 @@ public sealed partial class HomeView : UserControl
         ActionRequested?.Invoke(this, HomeAction.Clone);
 
     private void Setup_Click(object sender, RoutedEventArgs e) =>
+        ActionRequested?.Invoke(this, HomeAction.AddRepositories);
+
+    private void AppSettings_SetupRequested(object? sender, EventArgs e) =>
         ActionRequested?.Invoke(this, HomeAction.RunSetup);
 
     private void Init_Click(object sender, RoutedEventArgs e) =>
@@ -599,6 +602,9 @@ public enum HomeAction
     Clone,
     Initialise,
 
-    /// <summary>Reopen the setup wizard, which is also how a folder is scanned for repositories.</summary>
+    /// <summary>Find repositories on this computer and add them to Home.</summary>
+    AddRepositories,
+
+    /// <summary>Run the whole first-run setup again.</summary>
     RunSetup
 }

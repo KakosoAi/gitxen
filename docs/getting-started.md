@@ -21,9 +21,21 @@ Get-FileHash -Algorithm SHA256 .\Gitxen-0.11.0-x64.msi
 
 ## First run
 
-The setup wizard finds your repositories, asks for your git identity and offers to turn on git's
-speed-ups for large repositories. Everything can be changed later in Settings, and Home keeps a
-*Find repositories* button that reopens the wizard.
+The setup wizard asks for your git identity, how Gitxen should look and behave, and then lists the
+repositories it finds in the usual code folders (`source\repos`, `Documents\GitHub`, `Projects`,
+`dev` and the like) for you to put on Home. Everything can be changed later in Settings, which can
+also run the setup again.
+
+## Adding more repositories
+
+Home's **Add repositories** button opens the same finder on its own, without the rest of setup:
+
+- The usual code folders are offered as chips, and **Add a folder…** scans any other. Several
+  folders can be on at once, and results appear as they are found.
+- Filter the list by name or folder, and pick what to add. Repositories already on Home are listed
+  but cannot be added twice.
+- Put them on Home without a project, in a project per folder, in an existing project, or in a new
+  one.
 
 ## Working with repositories
 

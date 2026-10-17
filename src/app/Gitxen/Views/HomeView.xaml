@@ -139,7 +139,7 @@
                         <FontIcon Glyph="&#xE710;" FontSize="{StaticResource IconSizeMedium}" />
                     </Button>
                     <Button Click="Setup_Click" Style="{StaticResource ToolbarButton}"
-                            AutomationProperties.Name="Find repositories" ToolTipService.ToolTip="Find repositories on this computer">
+                            AutomationProperties.Name="Add repositories" ToolTipService.ToolTip="Add repositories from this computer">
                         <FontIcon Glyph="&#xE721;" FontSize="{StaticResource IconSizeMedium}" />
                     </Button>
                     <Button Click="RefreshRecent_Click" Style="{StaticResource ToolbarButton}"
@@ -242,7 +242,7 @@
                            FontSize="{StaticResource FontSizeDisplay}" FontWeight="SemiBold" />
                 <TextBlock HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="460"
                            Style="{StaticResource PageSubtitleStyle}" FontSize="{StaticResource FontSizeBodyLarge}"
-                           Text="Open one from disk, clone one from a URL, or let Gitxen find the ones already on this computer. You can also drop a folder onto the window." />
+                           Text="Open one from disk, clone one from a URL, or add the ones already on this computer. You can also drop a folder onto the window." />
                 <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center" Margin="0,10,0,0">
                     <Button Click="Open_Click" Style="{ThemeResource AccentButtonStyle}" Padding="16,10">
                         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -259,7 +259,7 @@
                     <Button Click="Setup_Click" Padding="16,10">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <FontIcon Glyph="&#xE721;" FontSize="{StaticResource IconSizeMedium}" />
-                            <TextBlock Text="Find repositories" />
+                            <TextBlock Text="Add repositories" />
                         </StackPanel>
                     </Button>
                 </StackPanel>
@@ -280,7 +280,8 @@
                 <TextBlock Text="Home" VerticalAlignment="Center"
                            Style="{StaticResource PageSubtitleStyle}" />
             </StackPanel>
-            <views:SettingsView Grid.Row="1" x:Name="AppSettings" />
+            <views:SettingsView Grid.Row="1" x:Name="AppSettings" CanRunSetup="True"
+                                SetupRequested="AppSettings_SetupRequested" />
         </Grid>
 
         <Grid x:Name="GitConfigPage" Visibility="Collapsed" RowDefinitions="Auto,*">

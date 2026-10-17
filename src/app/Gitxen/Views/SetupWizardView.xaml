@@ -3,7 +3,7 @@
     x:Class="Gitxen.Views.SetupWizardView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:models="using:Gitxen.Models">
+    xmlns:views="using:Gitxen.Views">
 
     <!--
         A full-window overlay rather than a ContentDialog: the repository step is a scrolling list of
@@ -34,7 +34,7 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <ProgressBar x:Name="StepProgress" Minimum="0" Maximum="6" Value="0" />
+                    <ProgressBar x:Name="StepProgress" Minimum="0" Maximum="5" Value="0" />
                 </StackPanel>
 
                 <!-- Steps. Switched by visibility, so a half-filled box keeps its text when you go back. -->
@@ -60,7 +60,7 @@
                             </Border>
 
                             <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
-                                       Text="Nothing here is permanent. Every answer can be changed afterwards, and Home keeps a Find repositories button that opens this again." />
+                                       Text="Nothing here is permanent. Every answer can be changed afterwards in Settings, and Home's Add repositories button finds more repositories at any time." />
 
                             <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
                                        Text="Gitxen is free software (GPL-3.0-or-later), © 2026 Kakoso. It runs the git you already have installed; git is a separate program with its own licence." />
@@ -169,103 +169,12 @@
                         </StackPanel>
                     </ScrollViewer>
 
-                    <!-- 4: Find repositories -->
-                    <Grid x:Name="RepositoriesStep" Padding="28,20,28,20" Visibility="Collapsed"
-                          RowDefinitions="Auto,Auto,Auto,*">
-
-                        <TextBlock TextWrapping="Wrap"
-                                   Text="Point Gitxen at the folder you keep your work in, and it will find the repositories underneath it." />
-
-                        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,14,0,0">
-                            <Button x:Name="ChooseFolderButton" Content="Choose a folder..."
-                                    Click="ChooseFolder_Click" />
-                            <ComboBox x:Name="DepthBox" MinWidth="180" VerticalAlignment="Center">
-                                <ComboBoxItem Content="Look 2 folders deep" Tag="2" />
-                                <ComboBoxItem Content="Look 4 folders deep" Tag="4" />
-                                <ComboBoxItem Content="Look 6 folders deep" Tag="6" />
-                            </ComboBox>
-                            <Button x:Name="CancelScanButton" Content="Stop" Click="CancelScan_Click"
-                                    Visibility="Collapsed" VerticalAlignment="Center" />
-                        </StackPanel>
-
-                        <StackPanel Grid.Row="2" Spacing="8" Margin="0,14,0,10">
-                            <TextBlock x:Name="ScanStatus" Style="{StaticResource PageSubtitleStyle}"
-                                       TextTrimming="CharacterEllipsis"
-                                       Text="No folder chosen yet." />
-                            <ProgressBar x:Name="ScanProgressBar" IsIndeterminate="True" Visibility="Collapsed" />
-                            <StackPanel Orientation="Horizontal" Spacing="10" x:Name="SelectionButtons"
-                                        Visibility="Collapsed">
-                                <Button Content="Select all" Click="SelectAll_Click" />
-                                <Button Content="Select none" Click="SelectNone_Click" />
-                            </StackPanel>
-                        </StackPanel>
-
-                        <ListView Grid.Row="3" x:Name="RepositoryList" SelectionMode="None"
-                                  ItemContainerStyle="{StaticResource DenseListViewItemStyle}"
-                                  BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                  BorderThickness="1" CornerRadius="6">
-                            <ListView.ItemTemplate>
-                                <DataTemplate x:DataType="models:DiscoveredRepository">
-                                    <!--
-                                        Fixed widths with the star column last: a column placed after a
-                                        star-sized one is arranged off-screen in this app.
-                                    -->
-                                    <Grid ColumnDefinitions="Auto,220,160,*" ColumnSpacing="12" Padding="4,6">
-                                        <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}"
-                                                  MinWidth="0" VerticalAlignment="Center" />
-                                        <TextBlock Grid.Column="1" Text="{x:Bind Name}" FontWeight="SemiBold"
-                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                        <TextBlock Grid.Column="2" Text="{x:Bind Branch}"
-                                                   Style="{StaticResource SecondaryTextStyle}"
-                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                        <TextBlock Grid.Column="3" Text="{x:Bind RelativePath}"
-                                                   Style="{StaticResource SecondaryTextStyle}"
-                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                    </Grid>
-                                </DataTemplate>
-                            </ListView.ItemTemplate>
-                        </ListView>
+                    <!-- 4: Repositories. The same finder Home's "Add repositories" opens. -->
+                    <Grid x:Name="RepositoriesStep" Padding="28,20,28,20" Visibility="Collapsed">
+                        <views:RepositoryImporter x:Name="Importer" />
                     </Grid>
 
-                    <!-- 5: Projects -->
-                    <Grid x:Name="ProjectsStep" Padding="28,20,28,20" Visibility="Collapsed"
-                          RowDefinitions="Auto,Auto,*">
-
-                        <TextBlock TextWrapping="Wrap"
-                                   Text="Projects group repositories that are worked on together, so Home is organised the way the work is rather than as one flat list." />
-
-                        <StackPanel Grid.Row="1" Spacing="10" Margin="0,14,0,10">
-                            <RadioButton x:Name="NoProjectsOption" Content="Keep them in one list"
-                                         Checked="ProjectMode_Changed" />
-                            <RadioButton x:Name="FolderProjectsOption" Content="A project for each folder"
-                                         Checked="ProjectMode_Changed" />
-                            <RadioButton x:Name="SingleProjectOption" Content="One project for all of them"
-                                         Checked="ProjectMode_Changed" />
-                            <TextBox x:Name="SingleProjectName" Header="Project name" Text="My work"
-                                     Width="320" HorizontalAlignment="Left" Visibility="Collapsed" />
-                        </StackPanel>
-
-                        <ListView Grid.Row="2" x:Name="ProjectList" SelectionMode="None"
-                                  ItemContainerStyle="{StaticResource DenseListViewItemStyle}"
-                                  BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                  BorderThickness="1" CornerRadius="6" Visibility="Collapsed">
-                            <ListView.ItemTemplate>
-                                <DataTemplate x:DataType="models:ProposedProject">
-                                    <Grid ColumnDefinitions="Auto,300,*" ColumnSpacing="12" Padding="4,6">
-                                        <Border Width="10" Height="24" CornerRadius="3"
-                                                Background="{x:Bind Accent}" VerticalAlignment="Center" />
-                                        <TextBox Grid.Column="1" Text="{x:Bind Name, Mode=TwoWay}"
-                                                 VerticalAlignment="Center" />
-                                        <TextBlock Grid.Column="2" Text="{x:Bind CountText}"
-                                                   Style="{StaticResource SecondaryTextStyle}"
-                                                   VerticalAlignment="Center" />
-                                    </Grid>
-                                </DataTemplate>
-                            </ListView.ItemTemplate>
-                        </ListView>
-                    </Grid>
-
-                    <!-- 6: Finish -->
+                    <!-- 5: Finish -->
                     <ScrollViewer x:Name="FinishStep" Padding="28,20,28,20" Visibility="Collapsed">
                         <StackPanel Spacing="16">
                             <TextBlock Text="That is everything." Style="{StaticResource PageTitleStyle}" />

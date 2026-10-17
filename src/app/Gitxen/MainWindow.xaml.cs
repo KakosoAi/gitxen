@@ -362,10 +362,24 @@ public sealed partial class MainWindow : Window
                 await InitAsync();
                 break;
 
+            case HomeAction.AddRepositories:
+                AddRepositories.Show(PickFolderAsync, ViewModel.Recent, ViewModel.Groups.Select(group => group.Name));
+                break;
+
             case HomeAction.RunSetup:
                 ShowSetupWizard();
                 break;
         }
+    }
+
+    private async void AddRepositories_Completed(object? sender, ImportPlan plan)
+    {
+        ViewModel.ImportRepositories(
+            [.. plan.Repositories.Select(import => (import.Path, import.ProjectName))],
+            [.. plan.Projects.Select(project => (project.Name.Trim(), project.ColorKey))]);
+
+        await Home.RefreshAsync();
+        SaveSession();
     }
 
     private async void Home_OpenRequested(object? sender, string path) => await OpenRecentAsync(path);
@@ -1007,7 +1021,8 @@ public sealed partial class MainWindow : Window
         {
             HideLauncher();
         }
-        else if (!IsDialogOpen() && SetupWizard.Visibility != Visibility.Visible)
+        else if (!IsDialogOpen() && SetupWizard.Visibility != Visibility.Visible
+            && AddRepositories.Visibility != Visibility.Visible)
         {
             ShowLauncher(asStartScreen: false);
         }
@@ -1385,7 +1400,12 @@ public sealed partial class MainWindow : Window
     {
         // The folder picker has to be initialised with a window handle, which a UserControl has no
         // way to get, so the wizard is handed the window's own picker.
-        SetupWizard.Initialize(ViewModel.GlobalGit, ViewModel.Mode, PickFolderAsync);
+        SetupWizard.Initialize(
+            ViewModel.GlobalGit,
+            ViewModel.Mode,
+            PickFolderAsync,
+            ViewModel.Recent,
+            ViewModel.Groups.Select(group => group.Name));
         SetupWizard.Visibility = Visibility.Visible;
     }
 

@@ -928,7 +928,7 @@ public sealed class MainViewModel : ObservableObject
     ///  wizard imports a whole folder of them in one go. Ten would silently throw most of an import
     ///  away.
     /// </remarks>
-    private const int MaxRecent = 60;
+    private const int MaxRecent = 200;
 
     /// <summary>
     ///  Adds repositories found by the setup wizard to Home, creating the projects they go into.

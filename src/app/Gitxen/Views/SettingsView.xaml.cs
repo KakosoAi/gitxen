@@ -33,6 +33,18 @@ public sealed partial class SettingsView : RepositoryPage
     /// </summary>
     private bool _isLoading;
 
+    /// <summary>Asks the shell to run the first-run setup again.</summary>
+    public event EventHandler? SetupRequested;
+
+    /// <summary>Shows the "Run setup again" card. Only a host that handles <see cref="SetupRequested"/> sets it.</summary>
+    public bool CanRunSetup
+    {
+        get => SetupCard.Visibility == Visibility.Visible;
+        set => SetupCard.Visibility = value ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void RunSetup_Click(object sender, RoutedEventArgs e) => SetupRequested?.Invoke(this, EventArgs.Empty);
+
     /// <summary>The category on show: "general", "gitconfig" or "maintenance".</summary>
     private string _category = "general";
 

@@ -6,6 +6,19 @@ All notable changes to Gitxen are listed here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Add repositories** on Home: the repository finder on its own, without re-running setup. It
+  suggests the usual code folders, scans several at once, shows results as they are found, filters
+  by name, skips repositories already on Home, and puts them in a new, existing or per-folder project.
+- Settings → General → **Run setup again**, from Home's Settings.
+
+### Changed
+
+- The setup wizard's repository step scans the usual code folders by itself, and finding and
+  organising repositories are now one step instead of two.
+- Home can list up to 200 repositories (was 60), so a large import is not cut short.
+
 ## [0.11.0] - 2026-10-15
 
 ### Added

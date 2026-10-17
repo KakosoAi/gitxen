@@ -66,6 +66,20 @@
                            Style="{StaticResource PageSubtitleStyle}" />
             </StackPanel>
 
+            <!-- Shown where the shell can run it: on Home's settings page. -->
+            <Border x:Name="SetupCard" Style="{StaticResource CardBorderStyle}" Padding="16" Visibility="Collapsed">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+                    <FontIcon Glyph="&#xE7F8;" FontSize="{StaticResource IconSizeLarge}" VerticalAlignment="Center"
+                              Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="Setup" FontWeight="SemiBold" />
+                        <TextBlock Style="{StaticResource PageSubtitleStyle}" TextWrapping="Wrap"
+                                   Text="Go through the first-run setup again: identity, look, behaviour and repositories." />
+                    </StackPanel>
+                    <Button Grid.Column="2" Content="Run setup again" Click="RunSetup_Click" VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+
             <!--
                 Appearance. A gallery rather than a dropdown: a theme name says almost nothing about
                 what it looks like, and that is the whole basis for the choice. Each swatch is drawn

@@ -48,6 +48,14 @@ public sealed class DiscoveredRepository : ObservableObject
     /// </summary>
     public string SuggestedProject { get; }
 
+    /// <summary>Already on Home: listed so the scan is complete, but not imported a second time.</summary>
+    public bool IsAlreadyAdded { get; set; }
+
+    public bool CanSelect => !IsAlreadyAdded;
+
+    /// <summary>The row's note: where it is, or that it is already on Home.</summary>
+    public string Detail => IsAlreadyAdded ? $"Already on Home · {RelativePath}" : RelativePath;
+
     public bool IsSelected
     {
         get => _isSelected;

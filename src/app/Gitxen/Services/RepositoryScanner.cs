@@ -53,17 +53,73 @@ internal static class RepositoryScanner
     ///  down from where people keep them, and an unbounded walk of a large drive takes long enough
     ///  that it reads as a hang.
     /// </param>
+    /// <param name="found">
+    ///  Called on the scanning thread with each repository as soon as it is found, so a list can fill
+    ///  in while the rest of the folder is still being walked.
+    /// </param>
     public static Task<IReadOnlyList<DiscoveredRepository>> ScanAsync(
         string root,
         int maxDepth,
         IProgress<ScanProgress>? progress,
-        CancellationToken cancellationToken)
-        => Task.Run(() => Scan(root, maxDepth, progress, cancellationToken), cancellationToken);
+        CancellationToken cancellationToken,
+        Action<DiscoveredRepository>? found = null)
+        => Task.Run(() => Scan(root, maxDepth, progress, found, cancellationToken), cancellationToken);
+
+    /// <summary>
+    ///  Folders on this machine where people commonly keep code, that exist: Visual Studio's
+    ///  <c>source\repos</c>, GitHub Desktop's <c>Documents\GitHub</c>, and the usual names at the top of
+    ///  the profile and of each fixed drive.
+    /// </summary>
+    public static IReadOnlyList<string> SuggestedRoots()
+    {
+        string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        string[] names = ["source", "repos", "Projects", "projects", "dev", "code", "src", "git", "work", "GitHub"];
+
+        List<string> candidates =
+        [
+            Path.Combine(profile, "source", "repos"),
+            Path.Combine(documents, "GitHub"),
+            .. names.Select(name => Path.Combine(profile, name)),
+        ];
+
+        try
+        {
+            foreach (DriveInfo drive in DriveInfo.GetDrives().Where(drive => drive.DriveType == DriveType.Fixed && drive.IsReady))
+            {
+                candidates.AddRange(names.Select(name => Path.Combine(drive.RootDirectory.FullName, name)));
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // A drive that cannot be listed simply offers nothing.
+        }
+
+        List<string> roots = [];
+
+        foreach (string candidate in candidates.Where(Directory.Exists))
+        {
+            string full = Path.GetFullPath(candidate).TrimEnd(Path.DirectorySeparatorChar);
+
+            // source\repos and source are both candidates; keep the outer one only.
+            if (roots.Any(root => string.Equals(root, full, StringComparison.OrdinalIgnoreCase)
+                || full.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            roots.RemoveAll(root => root.StartsWith(full + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase));
+            roots.Add(full);
+        }
+
+        return roots;
+    }
 
     private static IReadOnlyList<DiscoveredRepository> Scan(
         string root,
         int maxDepth,
         IProgress<ScanProgress>? progress,
+        Action<DiscoveredRepository>? onFound,
         CancellationToken cancellationToken)
     {
         List<DiscoveredRepository> found = [];
@@ -94,7 +150,9 @@ internal static class RepositoryScanner
 
             if (IsRepository(directory))
             {
-                found.Add(Describe(root, directory));
+                DiscoveredRepository repository = Describe(root, directory);
+                found.Add(repository);
+                onFound?.Invoke(repository);
                 progress?.Report(new ScanProgress(visited, found.Count, directory));
 
                 // Do not descend: see the class remarks.

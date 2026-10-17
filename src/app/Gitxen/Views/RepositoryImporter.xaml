@@ -1,0 +1,97 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<UserControl
+    x:Class="Gitxen.Views.RepositoryImporter"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:Gitxen.Models"
+    HorizontalContentAlignment="Stretch"
+    VerticalContentAlignment="Stretch">
+
+    <!--
+        Finding the repositories already on this computer and choosing which go on Home, and into which
+        project. Shared by the first-run wizard and Home's "Add repositories", so both behave the same.
+    -->
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="12">
+
+        <!-- Where to look: one chip per folder. A chip that is on is scanned and its results listed. -->
+        <StackPanel Spacing="8">
+            <TextBlock Text="Where do you keep your code?" FontWeight="SemiBold" />
+            <ScrollViewer HorizontalScrollMode="Auto" HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollMode="Disabled" VerticalScrollBarVisibility="Disabled">
+                <StackPanel Orientation="Horizontal" Spacing="8" Padding="0,0,0,6">
+                    <StackPanel x:Name="RootChips" Orientation="Horizontal" Spacing="8" />
+                    <Button Click="AddFolder_Click" AutomationProperties.Name="Add a folder to scan">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon Glyph="&#xE8DA;" FontSize="{StaticResource IconSizeSmall}" />
+                            <TextBlock Text="Add a folder…" />
+                        </StackPanel>
+                    </Button>
+                    <ComboBox x:Name="DepthBox" MinWidth="150" VerticalAlignment="Center"
+                              ToolTipService.ToolTip="How many folders deep to look for repositories">
+                        <ComboBoxItem Content="2 folders deep" Tag="2" />
+                        <ComboBoxItem Content="4 folders deep" Tag="4" />
+                        <ComboBoxItem Content="6 folders deep" Tag="6" />
+                    </ComboBox>
+                </StackPanel>
+            </ScrollViewer>
+        </StackPanel>
+
+        <!-- Progress -->
+        <StackPanel Grid.Row="1" Spacing="6">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock x:Name="StatusText" Style="{StaticResource PageSubtitleStyle}"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           Text="Pick a folder above to look for repositories." />
+                <HyperlinkButton x:Name="StopButton" Content="Stop" Click="Stop_Click"
+                                 Visibility="Collapsed" Padding="4,0" />
+            </StackPanel>
+            <ProgressBar x:Name="ScanProgress" IsIndeterminate="True" Visibility="Collapsed" />
+        </StackPanel>
+
+        <!-- Filter and selection. The star column is last, per the layout constraint this app lives with. -->
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,Auto,*" ColumnSpacing="8">
+            <AutoSuggestBox x:Name="FilterBox" Width="280" PlaceholderText="Filter by name or folder"
+                            QueryIcon="Filter" TextChanged="FilterBox_TextChanged"
+                            AutomationProperties.Name="Filter repositories" />
+            <Button Grid.Column="1" Content="Select all shown" Click="SelectShown_Click" />
+            <Button Grid.Column="2" Content="Select none" Click="SelectNone_Click" />
+            <TextBlock Grid.Column="3" x:Name="CountText" VerticalAlignment="Center"
+                       Style="{StaticResource PageSubtitleStyle}" TextTrimming="CharacterEllipsis" />
+        </Grid>
+
+        <ListView Grid.Row="3" x:Name="RepositoryList" SelectionMode="None"
+                  ItemContainerStyle="{StaticResource DenseListViewItemStyle}"
+                  BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                  BorderThickness="1" CornerRadius="6">
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="models:DiscoveredRepository">
+                    <Grid ColumnDefinitions="Auto,220,150,*" ColumnSpacing="12" Padding="4,6">
+                        <CheckBox IsChecked="{x:Bind IsSelected, Mode=TwoWay}" IsEnabled="{x:Bind CanSelect}"
+                                  MinWidth="0" VerticalAlignment="Center"
+                                  Checked="Row_Toggled" Unchecked="Row_Toggled"
+                                  AutomationProperties.Name="{x:Bind Name}" />
+                        <TextBlock Grid.Column="1" Text="{x:Bind Name}" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="2" Text="{x:Bind Branch}"
+                                   Style="{StaticResource SecondaryTextStyle}"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="3" Text="{x:Bind Detail}"
+                                   Style="{StaticResource SecondaryTextStyle}"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                   ToolTipService.ToolTip="{x:Bind Path}" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <!-- Where they go on Home. -->
+        <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="10">
+            <TextBlock Text="Put them in" VerticalAlignment="Center" />
+            <ComboBox x:Name="ProjectBox" MinWidth="240" SelectionChanged="ProjectBox_SelectionChanged"
+                      AutomationProperties.Name="Project for the added repositories" />
+            <TextBox x:Name="NewProjectBox" Width="220" PlaceholderText="New project name"
+                     Visibility="Collapsed" AutomationProperties.Name="New project name" />
+            <TextBlock x:Name="ProjectHint" VerticalAlignment="Center" Style="{StaticResource PageSubtitleStyle}" />
+        </StackPanel>
+    </Grid>
+</UserControl>
