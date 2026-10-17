@@ -1,0 +1,18 @@
+// Cloudflare Workers configuration for https://gitxen.kakoso.ai: the static files in site/, no code.
+// Cloudflare builds this on every push to main ("npx wrangler deploy"); other branches get preview URLs.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "gitxen",
+  "compatibility_date": "2026-10-12",
+  "assets": {
+    "directory": "site"
+  },
+  "routes": [
+    { "pattern": "gitxen.kakoso.ai", "custom_domain": true }
+  ],
+  "workers_dev": true,
+  "preview_urls": true,
+  "observability": {
+    "enabled": false
+  }
+}
